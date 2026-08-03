@@ -1,0 +1,5 @@
+Q: What is MOQ?
+A: MOQ stands for Minimum Order Quantity, the smallest amount of a product a supplier is willing to sell.
+
+Q: Difference between Depot and Plant?
+A: A Plant is a manufacturing or production location, while a Depot is a storage/distribution location without production capability.
