@@ -1,23 +1,4 @@
-# Virtual environment
-venv/
-
-# Python cache
-__pycache__/
-*.pyc
-
-# Environment secrets/config
+node_modules/
+dist/
 .env
-
-# Runtime data — regenerated automatically, shouldn't be in git
-chroma_data/
-feedback.db
-logs/
-*.log
-
-# OS junk
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
+*.tsbuildinfo
