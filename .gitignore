@@ -1,4 +1,28 @@
+# ---------- Node / Frontend ----------
 node_modules/
 dist/
-.env
 *.tsbuildinfo
+
+# ---------- Environment ----------
+.env
+
+# ---------- Python ----------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ---------- Runtime Data ----------
+chroma_data/
+feedback.db
+logs/
+*.log
+
+# ---------- IDE ----------
+.vscode/
+.idea/
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
