@@ -1,0 +1,17 @@
+---
+description: Keep Flow.md accurate for the call path being changed
+alwaysApply: true
+---
+
+# Execution flow
+
+Before editing runtime code, update `Flow.md` (repo root) so it states:
+
+1. Entry point (UI route, HTTP verb, CLI, or job)
+2. Ordered call chain: file → function/module → next hop
+3. Exactly which hop(s) this session is changing
+4. What stays mocked vs live
+
+Use mermaid sequence or flowchart for the path under edit. Keep other paths summarized, not deleted.
+
+If you discover Flow.md is wrong, fix it in the same session. Do not describe a design-doc path that the code no longer follows.

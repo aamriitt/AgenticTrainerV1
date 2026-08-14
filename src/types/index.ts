@@ -58,6 +58,8 @@ export interface ChatMessage {
   confidence?: number;
   citations?: Citation[];
   followups?: string[];
+  /** Backend feedback row id for thumbs up/down persistence */
+  feedbackId?: number;
 }
 
 export interface Conversation {

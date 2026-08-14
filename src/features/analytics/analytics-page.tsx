@@ -12,6 +12,7 @@ export function AnalyticsPage() {
   const { toast } = useToast();
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d">("30d");
 
+  const summary = useQuery({ queryKey: ["analytics", "summary"], queryFn: analyticsService.getSummary });
   const topQuestions = useQuery({ queryKey: ["analytics", "top-questions"], queryFn: analyticsService.getTopQuestions });
   const feedback = useQuery({ queryKey: ["analytics", "feedback"], queryFn: analyticsService.getFeedbackDistribution });
   const retrievalTrend = useQuery({ queryKey: ["analytics", "retrieval-trend"], queryFn: analyticsService.getRetrievalAccuracyTrend });
@@ -19,7 +20,7 @@ export function AnalyticsPage() {
   const docUsage = useQuery({ queryKey: ["analytics", "doc-usage"], queryFn: analyticsService.getDocumentUsage });
   const confidenceDist = useQuery({ queryKey: ["analytics", "confidence-dist"], queryFn: analyticsService.getConfidenceDistribution });
 
-  const maxTopQuestion = Math.max(...(topQuestions.data?.map((q) => q.value) ?? [1]));
+  const maxTopQuestion = Math.max(...(topQuestions.data?.map((q) => q.value) ?? [1]), 1);
 
   const handleExport = () => {
     toast({
@@ -107,10 +108,44 @@ export function AnalyticsPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-        <MetricCard metric={{ id: "cov", label: "Knowledge coverage", value: "87%", deltaLabel: "+4 pts", trend: "up" }} icon={Layers} tone="indigo" />
-        <MetricCard metric={{ id: "success", label: "Search success rate", value: "94.6%", deltaLabel: "+1.2 pts", trend: "up" }} icon={Search} tone="emerald" />
-        <MetricCard metric={{ id: "session", label: "Avg session length", value: "4m 12s" }} icon={Clock} tone="blue" />
-        <MetricCard metric={{ id: "escalations", label: "Escalations", value: "18", deltaLabel: "-6 this week", trend: "down" }} icon={AlertTriangle} tone="amber" />
+        <MetricCard
+          metric={{
+            id: "interactions",
+            label: "Total interactions",
+            value: String(summary.data?.total_interactions ?? "—"),
+          }}
+          icon={Layers}
+          tone="indigo"
+        />
+        <MetricCard
+          metric={{
+            id: "thumbs-up",
+            label: "Thumbs up",
+            value: String(summary.data?.thumbs_up ?? "—"),
+          }}
+          icon={Search}
+          tone="emerald"
+        />
+        <MetricCard
+          metric={{
+            id: "vectors",
+            label: "Vectors stored",
+            value: String(summary.data?.vectors_stored ?? "—"),
+          }}
+          icon={Clock}
+          tone="blue"
+        />
+        <MetricCard
+          metric={{
+            id: "pending",
+            label: "Pending SME review",
+            value: String(summary.data?.pending_review ?? "—"),
+            deltaLabel: `${summary.data?.thumbs_down ?? 0} thumbs down`,
+            trend: "down",
+          }}
+          icon={AlertTriangle}
+          tone="amber"
+        />
       </div>
     </div>
   );

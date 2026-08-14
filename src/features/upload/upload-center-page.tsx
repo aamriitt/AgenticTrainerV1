@@ -28,11 +28,11 @@ export function UploadCenterPage() {
     setJobs(initialJobs);
   }
 
-  const handleFilesAdded = (files: FileList | File[]) => {
+  const handleFilesAdded = async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
 
-    const newJobs: UploadJob[] = fileArray.map((file, idx) => {
+    const prepared: Array<{ file: File; job: UploadJob }> = fileArray.map((file, idx) => {
       const ext = file.name.split(".").pop()?.toLowerCase() || "";
       let type: UploadJob["type"] = "pdf";
       if (["mp4", "mov", "avi"].includes(ext)) type = "video";
@@ -40,44 +40,50 @@ export function UploadCenterPage() {
       else if (["md", "runbook"].includes(ext)) type = "runbook";
 
       const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      const sizeLabel = file.size > 0 ? `${sizeMB} MB` : "1.2 MB";
+      const sizeLabel = file.size > 0 ? `${sizeMB} MB` : "0 MB";
 
       return {
-        id: `up-custom-${Date.now()}-${idx}`,
-        fileName: file.name,
-        type,
-        sizeLabel,
-        stage: "ready",
-        progress: 15,
+        file,
+        job: {
+          id: `up-custom-${Date.now()}-${idx}`,
+          fileName: file.name,
+          type,
+          sizeLabel,
+          stage: "uploaded",
+          progress: 20,
+        },
       };
     });
 
-    setJobs((prev) => [...newJobs, ...prev]);
-
+    setJobs((prev) => [...prepared.map((p) => p.job), ...prev]);
     toast({
-      title: `${newJobs.length} knowledge file(s) queued`,
-      description: "Processing Whisper transcription, cleaning, and ChromaDB vector indexing.",
-      type: "success",
+      title: `${prepared.length} file(s) uploading`,
+      description: "Indexing into ChromaDB via the Agentic Trainer API.",
+      type: "info",
     });
 
-    newJobs.forEach((job) => {
-      setTimeout(() => {
+    for (const { file, job } of prepared) {
+      try {
         setJobs((prev) =>
-          prev.map((j) => (j.id === job.id ? { ...j, stage: "chunked", progress: 65 } : j))
+          prev.map((j) => (j.id === job.id ? { ...j, stage: "chunked", progress: 55 } : j))
         );
-      }, 2000);
-
-      setTimeout(() => {
+        const result = await uploadService.uploadFile(file);
         setJobs((prev) =>
           prev.map((j) => (j.id === job.id ? { ...j, stage: "indexed", progress: 100 } : j))
         );
         toast({
           title: "Indexing complete",
-          description: `${job.fileName} is now retrieval-ready in Ask Atlas!`,
+          description: `${result.filename}: ${result.chunks_indexed} chunks ready in Ask Atlas.`,
           type: "success",
         });
-      }, 4500);
-    });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Upload failed";
+        setJobs((prev) =>
+          prev.map((j) => (j.id === job.id ? { ...j, stage: "uploaded", progress: 0 } : j))
+        );
+        toast({ title: `Failed: ${job.fileName}`, description: message, type: "error" });
+      }
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {

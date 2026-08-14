@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { MoreHorizontal, RefreshCw, Cpu, Database, Boxes, Mic, GitBranch, Eye, ShieldCheck, Users, Check, Save, Terminal, Sparkles } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MoreHorizontal, RefreshCw, Cpu, Database, Boxes, Mic, GitBranch, Eye, ShieldCheck, Users, Save, Terminal, Sparkles, CheckCircle2, XCircle } from "lucide-react";
 import { adminService } from "@/services/admin.service";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,40 +27,69 @@ const ROLE_CARDS = [
 
 export function AdminPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const users = useQuery({ queryKey: ["admin", "users"], queryFn: adminService.getUsers });
   const modelStatus = useQuery({ queryKey: ["admin", "model-status"], queryFn: adminService.getModelStatus });
   const logs = useQuery({ queryKey: ["admin", "logs"], queryFn: adminService.getLogs });
+  const pending = useQuery({ queryKey: ["admin", "pending"], queryFn: adminService.listPending });
 
   const [tab, setTab] = useState("users");
   const [selectedLlm, setSelectedLlm] = useState("Claude 3.5 Sonnet");
-  const [selectedEmbedder, setSelectedEmbedder] = useState("text-embedding-3-large");
+  const [selectedEmbedder, setSelectedEmbedder] = useState("BGE-base-en-v1.5");
   const [isReindexing, setIsReindexing] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
   const [logFilter, setLogFilter] = useState<"all" | "info" | "warn" | "error">("all");
 
   const handleSaveModelConfig = () => {
     toast({
-      title: "Model configuration updated",
-      description: `Primary LLM set to ${selectedLlm}, Embedding model: ${selectedEmbedder}.`,
-      type: "success",
+      title: "Model preferences noted",
+      description: `UI preference saved locally. Runtime LLM is controlled by server OLLAMA_MODEL.`,
+      type: "info",
     });
   };
 
-  const handleReindexAll = () => {
+  const handleReindexAll = async () => {
     setIsReindexing(true);
-    toast({
-      title: "Full system re-index started",
-      description: "Rebuilding vector embeddings for all 1,284 knowledge items.",
-      type: "info",
-    });
-
-    setTimeout(() => {
-      setIsReindexing(false);
+    try {
+      const result = await adminService.reindexApproved();
       toast({
-        title: "Re-indexing complete",
-        description: "Vector database synchronized successfully.",
+        title: "SME re-index complete",
+        description: `${result.corrections_reindexed} approved correction(s) re-embedded into ChromaDB.`,
         type: "success",
       });
-    }, 3500);
+      await queryClient.invalidateQueries({ queryKey: ["admin", "pending"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "model-status"] });
+    } catch (err) {
+      toast({
+        title: "Re-index failed",
+        description: err instanceof Error ? err.message : "Could not reindex",
+        type: "error",
+      });
+    } finally {
+      setIsReindexing(false);
+    }
+  };
+
+  const handleReview = async (id: number, action: "approve" | "reject") => {
+    setBusyId(id);
+    try {
+      if (action === "approve") await adminService.approve(id, "Approved via Admin console");
+      else await adminService.reject(id, "Rejected via Admin console");
+      toast({
+        title: action === "approve" ? "Correction approved" : "Correction rejected",
+        description: `Feedback #${id} updated.`,
+        type: "success",
+      });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "pending"] });
+    } catch (err) {
+      toast({
+        title: "Review failed",
+        description: err instanceof Error ? err.message : "Could not update review",
+        type: "error",
+      });
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const filteredLogs = (logs.data ?? []).filter(
@@ -71,6 +100,7 @@ export function AdminPage() {
     <Tabs value={tab} onValueChange={setTab} className="space-y-4">
       <TabsList className="bg-card border border-border p-1 rounded-xl">
         <TabsTrigger value="users" className="rounded-lg text-xs font-semibold">Team Users</TabsTrigger>
+        <TabsTrigger value="sme" className="rounded-lg text-xs font-semibold">SME Review</TabsTrigger>
         <TabsTrigger value="roles" className="rounded-lg text-xs font-semibold">Role Permissions</TabsTrigger>
         <TabsTrigger value="model" className="rounded-lg text-xs font-semibold">Model Settings</TabsTrigger>
         <TabsTrigger value="logs" className="rounded-lg text-xs font-semibold">System Logs</TabsTrigger>
@@ -121,6 +151,47 @@ export function AdminPage() {
                 ))}
               </tbody>
             </table>
+          )}
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="sme">
+        <Card className="overflow-hidden border border-border/80 shadow-xs">
+          <div className="flex items-center justify-between border-b border-border p-4 bg-secondary/30">
+            <div>
+              <h3 className="text-[14px] font-bold text-foreground">Pending SME Corrections</h3>
+              <p className="text-xs text-muted-foreground">Thumbs-down feedback waiting for approve/reject, then re-index</p>
+            </div>
+            <Button onClick={handleReindexAll} disabled={isReindexing} className="rounded-xl gap-2">
+              <RefreshCw className={`h-3.5 w-3.5 ${isReindexing ? "animate-spin" : ""}`} />
+              {isReindexing ? "Re-indexing…" : "Re-index approved"}
+            </Button>
+          </div>
+          {pending.isLoading ? (
+            <div className="p-4"><Skeleton className="h-40" /></div>
+          ) : !pending.data?.length ? (
+            <div className="p-8 text-center text-sm text-muted-foreground">No pending corrections in the SME queue.</div>
+          ) : (
+            <div className="divide-y divide-border">
+              {pending.data.map((item) => (
+                <div key={item.id} className="p-4 space-y-2">
+                  <div className="text-[11px] font-semibold text-muted-foreground">#{item.id} · {new Date(item.created_at).toLocaleString()}</div>
+                  <div className="text-sm font-bold text-foreground">{item.question}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-2">Atlas answer: {item.answer}</div>
+                  <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-foreground">
+                    Suggested correction: {item.correction || "(none provided)"}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" disabled={busyId === item.id} onClick={() => handleReview(item.id, "approve")} className="gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                    </Button>
+                    <Button size="sm" variant="secondary" disabled={busyId === item.id} onClick={() => handleReview(item.id, "reject")} className="gap-1.5">
+                      <XCircle className="h-3.5 w-3.5" /> Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </Card>
       </TabsContent>
@@ -206,12 +277,12 @@ export function AdminPage() {
           <Card className="border border-border/80 shadow-xs">
             <CardContent className="flex flex-wrap items-center justify-between gap-4 p-[18px]">
               <div>
-                <div className="text-[13.5px] font-bold text-foreground">Reindex Entire SME Knowledge Base</div>
-                <div className="mt-0.5 text-xs text-muted-foreground">Rebuilds vector embeddings for all 1,284 documents and transcripts in ChromaDB.</div>
+                <div className="text-[13.5px] font-bold text-foreground">Re-embed Approved SME Corrections</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">Pushes approved thumbs-down corrections into ChromaDB so Ask Atlas learns from them.</div>
               </div>
               <Button onClick={handleReindexAll} disabled={isReindexing} className="rounded-xl gap-2 shadow-sm">
                 <RefreshCw className={`h-3.5 w-3.5 ${isReindexing ? "animate-spin" : ""}`} />
-                {isReindexing ? "Re-indexing Vectors…" : "Reindex Now"}
+                {isReindexing ? "Re-indexing…" : "Re-index approved"}
               </Button>
             </CardContent>
           </Card>

@@ -1,0 +1,21 @@
+---
+description: Quiz the user after major changes; only treat work as accepted if they pass
+alwaysApply: true
+---
+
+# Quiz gate (major changes)
+
+A **major change** is any of: auth/RBAC, API contracts, pipeline routing, retrieval/verification, storage schema, new production dependency, or a long session that rewired UI ↔ backend.
+
+After such work, **stop**. Do not treat the session as accepted, and do not commit unless the user already asked **and** they pass the quiz.
+
+Give a short quiz (5–8 questions) covering:
+
+- What now hits a live API vs still uses mocks
+- The call order of the path you changed
+- Why a library/pattern was chosen
+- A failure mode or tradeoff you accepted
+
+Scoring: they pass if they get most questions right **and** can explain the risky tradeoff. If they fail, explain missed answers, do not “accept” the change, and offer a retake. Do not skip the quiz because the user seems busy.
+
+This session (docs/rules only) is not a major runtime change — no quiz required for creating `decisions.md` / `Flow.md` / these rules.

@@ -1,5 +1,7 @@
 import * as React from "react";
 import type { AppRole } from "@/types";
+import { authService } from "@/services/auth.service";
+import { getAccessToken, setAccessToken } from "@/services/api-client";
 
 export interface AuthUser {
   name: string;
@@ -10,8 +12,8 @@ export interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  /** Signs a person in with a given role. Used by both the admin and user login screens. */
-  login: (input: { name: string; email: string; role: AppRole }) => void;
+  /** Authenticates against the FastAPI backend and stores the JWT. */
+  login: (input: { email: string; password: string; name?: string }) => Promise<void>;
   logout: () => void;
 }
 
@@ -25,7 +27,9 @@ function readStoredUser(): AuthUser | null {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as AuthUser;
-    if (parsed && (parsed.role === "admin" || parsed.role === "user")) return parsed;
+    if (parsed && (parsed.role === "admin" || parsed.role === "user") && getAccessToken()) {
+      return parsed;
+    }
     return null;
   } catch {
     return null;
@@ -35,15 +39,22 @@ function readStoredUser(): AuthUser | null {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<AuthUser | null>(readStoredUser);
 
-  const login = React.useCallback((input: { name: string; email: string; role: AppRole }) => {
-    const nextUser: AuthUser = { name: input.name, email: input.email, role: input.role };
+  const login = React.useCallback(async (input: { email: string; password: string; name?: string }) => {
+    const result = await authService.login(input.email, input.password, input.name);
+    const nextUser: AuthUser = {
+      name: result.user.name,
+      email: result.user.email,
+      role: result.user.role,
+    };
     setUser(nextUser);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
   }, []);
 
   const logout = React.useCallback(() => {
+    authService.logout();
     setUser(null);
     window.localStorage.removeItem(STORAGE_KEY);
+    setAccessToken(null);
   }, []);
 
   const value = React.useMemo(

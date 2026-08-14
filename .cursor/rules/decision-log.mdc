@@ -1,0 +1,21 @@
+---
+description: Log every meaningful code decision and its reasoning in decisions.md
+alwaysApply: true
+---
+
+# Decision log
+
+After any non-trivial code change, append an entry to `decisions.md` (repo root). Do not skip this because the change “seems obvious.”
+
+Each entry must include:
+
+- Date and session context
+- Decision (what was chosen)
+- Alternatives considered
+- Why this option (library, pattern, or tradeoff)
+- What was accepted as a cost
+- Files touched
+
+Log these kinds of choices: new dependency vs existing one, pattern (graph vs linear, JWT vs session, live API vs mock), storage, auth/RBAC, retrieval/fusion, error handling, and “leave this mocked for now.”
+
+Do not invent decisions that were not actually made. If you only followed an existing pattern, say so in one line.

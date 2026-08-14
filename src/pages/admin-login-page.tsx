@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ShieldCheck, Lock, KeyRound } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Lock } from "lucide-react";
 import { AtlasLogoMark } from "@/components/branding/atlas-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,29 +9,32 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/contexts/toast-context";
 
-/**
- * Admin console sign-in — visually distinct dark "control room" theme so it
- * reads unmistakably as an elevated-permissions surface, separate from the
- * everyday team-member login.
- */
+/** Admin console sign-in — JWT auth with admin role enforced by the API. */
 export function AdminLoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { toast } = useToast();
-  const [name, setName] = useState("Arun Verma");
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  const [email, setEmail] = useState("admin@company.com");
+  const [password, setPassword] = useState("Admin123!");
+  const [busy, setBusy] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    login({ name: name.trim() || "Admin", email: email.trim() || "admin@company.com", role: "admin" });
-    toast({ title: `Admin console unlocked`, description: `Signed in as ${name.trim() || "Admin"}.`, type: "success" });
-    navigate("/");
+    setBusy(true);
+    try {
+      await login({ email: email.trim(), password });
+      toast({ title: "Admin console unlocked", description: "Signed in with elevated access.", type: "success" });
+      navigate("/");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Sign-in failed";
+      toast({ title: "Admin sign-in failed", description: message, type: "error" });
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-slate-950 px-4">
-      {/* subtle grid backdrop to read as a control panel, not the friendly workspace */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.07]"
         style={{
@@ -58,22 +61,11 @@ export function AdminLoginPage() {
           </div>
           <h1 className="text-lg font-extrabold text-white">Admin console</h1>
           <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
-            <AtlasLogoMark tone="white" size={13} /> Elevated access to Agentic Trainer
+            <AtlasLogoMark tone="white" size={13} /> Demo: admin@company.com / Admin123!
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="admin-name" className="text-slate-300">Full name</Label>
-            <Input
-              id="admin-name"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Arun Verma"
-              className="border-slate-700 bg-slate-800/60 text-white placeholder:text-slate-500 focus-visible:ring-emerald-500"
-            />
-          </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="admin-email" className="text-slate-300">Admin email</Label>
             <Input
@@ -94,32 +86,16 @@ export function AdminLoginPage() {
               id="admin-password"
               type="password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="border-slate-700 bg-slate-800/60 text-white placeholder:text-slate-500 focus-visible:ring-emerald-500"
             />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="admin-2fa" className="flex items-center gap-1.5 text-slate-300">
-              <KeyRound className="h-3 w-3" /> Security code
-            </Label>
-            <Input
-              id="admin-2fa"
-              inputMode="numeric"
-              maxLength={6}
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-              placeholder="6-digit authenticator code"
-              className="border-slate-700 bg-slate-800/60 font-mono tracking-[0.3em] text-white placeholder:tracking-normal placeholder:text-slate-500 focus-visible:ring-emerald-500"
-            />
-          </div>
-          <Button type="submit" className="mt-1 bg-emerald-500 text-slate-950 hover:bg-emerald-400">
-            Unlock admin console
+          <Button type="submit" disabled={busy} className="mt-1 bg-emerald-500 text-slate-950 hover:bg-emerald-400">
+            {busy ? "Unlocking…" : "Unlock admin console"}
           </Button>
         </form>
-
-        <p className="mt-5 text-center text-[11px] text-slate-500">
-          Admin sign-ins are logged for security auditing.
-        </p>
       </motion.div>
     </div>
   );

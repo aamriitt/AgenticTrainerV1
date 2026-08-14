@@ -183,10 +183,34 @@ class FeedbackStore:
             pending = conn.execute(
                 "SELECT COUNT(*) AS c FROM feedback WHERE status = 'pending'"
             ).fetchone()["c"]
+            top_rows = conn.execute(
+                """
+                SELECT question AS label, COUNT(*) AS value
+                FROM feedback
+                GROUP BY lower(trim(question))
+                ORDER BY value DESC
+                LIMIT 8
+                """
+            ).fetchall()
 
         return {
             "total_interactions": total,
             "thumbs_up": thumbs_up,
             "thumbs_down": thumbs_down,
             "pending_review": pending,
+            "top_questions": [{"label": r["label"], "value": r["value"]} for r in top_rows],
         }
+
+    def list_recent_interactions(self, limit: int = 50) -> list[dict]:
+        """Recent Q&A rows for conversation history UI."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT id, created_at, question, answer, intent, citations, rating, status
+                FROM feedback
+                ORDER BY datetime(created_at) DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [dict(row) for row in rows]

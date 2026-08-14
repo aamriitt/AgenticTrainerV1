@@ -31,6 +31,7 @@ export function AtlasWorkspacePage() {
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [feedbackType, setFeedbackType] = useState<"up" | "down" | null>(null);
+  const [activeFeedbackId, setActiveFeedbackId] = useState<number | null>(null);
   const [attachedDoc, setAttachedDoc] = useState<KnowledgeItem | null>(null);
   const [isApiKeyOpen, setIsApiKeyOpen] = useState(false);
   const [isLive, setIsLive] = useState(hasLiveLLM());
@@ -139,7 +140,10 @@ export function AtlasWorkspacePage() {
                 message={m}
                 onFollowup={handleSend}
                 onSelectCitation={(c) => setInspectCitation(c)}
-                onFeedback={(type) => setFeedbackType(type)}
+                onFeedback={(type) => {
+                  setFeedbackType(type);
+                  setActiveFeedbackId(m.feedbackId ?? null);
+                }}
               />
             ))}
 
@@ -288,7 +292,11 @@ export function AtlasWorkspacePage() {
       <FeedbackModal
         isOpen={Boolean(feedbackType)}
         type={feedbackType}
-        onClose={() => setFeedbackType(null)}
+        feedbackId={activeFeedbackId}
+        onClose={() => {
+          setFeedbackType(null);
+          setActiveFeedbackId(null);
+        }}
       />
       <ApiKeyModal
         isOpen={isApiKeyOpen}

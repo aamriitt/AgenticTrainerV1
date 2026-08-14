@@ -1,0 +1,7 @@
+﻿Deployment Failure Runbook
+1. Identify failed stage in CI/CD.
+2. Capture error logs and correlating commit SHA.
+3. If production impact: initiate rollback to previous stable tag.
+4. Notify #incidents channel and page on-call.
+5. File RCA within 24 hours.
+6. Re-deploy only after fix is reviewed and tests pass.

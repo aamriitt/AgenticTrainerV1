@@ -72,10 +72,10 @@ export const MOCK_PIPELINE_STAGES: PipelineStage[] = [
   { id: "stage-2", name: "Whisper transcription", status: "done", durationLabel: "3m 12s", recordsLabel: "162" },
   { id: "stage-3", name: "Cleaning", status: "done", durationLabel: "1.1s", recordsLabel: "1,446" },
   { id: "stage-4", name: "Chunking", status: "done", durationLabel: "2.3s", recordsLabel: "48,204" },
-  { id: "stage-5", name: "Embedding model", status: "active", durationLabel: "running", recordsLabel: "31,880 / 48,204" },
-  { id: "stage-6", name: "ChromaDB", status: "queued", durationLabel: "—", recordsLabel: "—" },
-  { id: "stage-7", name: "Retriever", status: "idle", durationLabel: "—", recordsLabel: "—" },
-  { id: "stage-8", name: "Response", status: "idle", durationLabel: "—", recordsLabel: "—" },
+  { id: "stage-5", name: "Embedding model", status: "done", durationLabel: "18.4s", recordsLabel: "48,204" },
+  { id: "stage-6", name: "ChromaDB", status: "done", durationLabel: "2.1s", recordsLabel: "48,204" },
+  { id: "stage-7", name: "Retriever", status: "done", durationLabel: "0.3s", recordsLabel: "hybrid BM25+vector" },
+  { id: "stage-8", name: "Response", status: "done", durationLabel: "1.2s", recordsLabel: "grounded" },
 ];
 
 export const MOCK_DASHBOARD_METRICS: MetricSummary[] = [

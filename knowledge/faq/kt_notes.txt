@@ -1,0 +1,5 @@
+﻿Knowledge Transfer Notes â€” Integration Platform
+- Use naming convention: <domain>-<service>-iflow
+- Secrets live in the vault; never hardcode credentials in iFlows.
+- For CPI connectivity issues, validate certificates and whitelist IPs first.
+- SME review queue must approve corrections before re-indexing.
