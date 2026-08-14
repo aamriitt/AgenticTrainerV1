@@ -1,0 +1,52 @@
+{
+  "documents": [
+    {
+      "id": "db-integration-jdbc-java",
+      "text": "Java consumers connect to PostgreSQL through the pgjdbc JDBC driver, which is bundled inside each application rather than shared. PostgreSQL JDBC drivers older than 42.2.5 fail SCRAM-SHA-256 authentication, and builds before 42.5 may not negotiate the TLS defaults enforced by PostgreSQL 15+. Because the driver ships per-service, every Java integration (claims, billing, policy admin) must be independently rebuilt and redeployed with an updated pgjdbc. Connection-pool libraries (HikariCP) may also cache prepared statements that break on server-side plan changes.",
+      "metadata": {
+        "technology_type": "database",
+        "source": "Cross-Language Integration Matrix",
+        "topic": "integration",
+        "risk_hint": "High",
+        "validation_checks": ["build", "integration", "regression"],
+        "domain": "insurance"
+      }
+    },
+    {
+      "id": "db-integration-odbc-dotnet",
+      "text": "A single PostgreSQL upgrade can affect consumers written in different languages very differently. A .NET reporting service using Npgsql or the psqlODBC driver requires Npgsql 6.0+ (for PG15) and an updated psqlODBC build to speak the new wire protocol and SCRAM authentication, while a Python ETL job on psycopg2 needs 2.9.3+, and a Java service needs pgjdbc 42.5+. These are independent upgrades owned by different teams with different release cadences, so the database change fans out into several coordinated client changes that must all land before cutover.",
+      "metadata": {
+        "technology_type": "database",
+        "source": "Cross-Language Integration Matrix",
+        "topic": "integration",
+        "risk_hint": "High",
+        "validation_checks": ["build", "integration", "regression", "rollback"],
+        "domain": "insurance"
+      }
+    },
+    {
+      "id": "db-integration-shared-contract",
+      "text": "When multiple teams consume the same database, the schema and engine behavior become a shared contract that no single team fully owns. One team may read via a Java JDBC service, another via a Python data pipeline, and another via a BI tool over ODBC; each relies on specific type representations, extensions, or query-plan behavior. An engine upgrade that changes planner statistics, default authentication, or type output silently breaks a subset of consumers. Mitigation requires inventorying every dependent service, assigning named owners, running per-consumer integration tests, and gating the cutover on all consumers being validated together.",
+      "metadata": {
+        "technology_type": "database",
+        "source": "Shared Database Ownership Runbook",
+        "topic": "integration",
+        "risk_hint": "High",
+        "validation_checks": ["integration", "regression", "rollback"],
+        "domain": "general"
+      }
+    },
+    {
+      "id": "db-integration-serialization-contract",
+      "text": "Cross-language data contracts break in subtle ways during upgrades. REST APIs backed by the upgraded system may change JSON serialization (timestamp precision, decimal/numeric formatting, null-vs-omitted fields, enum casing), silently breaking consumers in strictly-typed languages. Event-driven consumers reading Kafka topics depend on Avro/Protobuf schema-registry compatibility, and shared Parquet/Avro files written by Spark (Scala) and read by pandas (Python) can fail on schema evolution or type-width changes. Always run cross-language contract tests and diff representative payloads and files before and after the upgrade.",
+      "metadata": {
+        "technology_type": "database",
+        "source": "Cross-Language Integration Matrix",
+        "topic": "integration",
+        "risk_hint": "Medium",
+        "validation_checks": ["integration", "data", "regression"],
+        "domain": "general"
+      }
+    }
+  ]
+}

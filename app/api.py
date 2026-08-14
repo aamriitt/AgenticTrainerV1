@@ -26,13 +26,15 @@ from app.auth import (
 )
 from app.config import settings
 from app.pipeline import AgenticTrainerPipeline
+from app.rebootx.engine import knowledge_service as rebootx_knowledge, seed_compatibility_knowledge
+from app.rebootx.router import router as rebootx_router
 from app.utils.logger import get_logger
 
 logger = get_logger("api")
 
 app = FastAPI(
     title="Agentic Trainer API",
-    description="Enterprise knowledge assistant: ingestion, grounded Q&A, and SME-gated learning.",
+    description="Enterprise knowledge assistant plus RebootX tech-refresh assessments.",
     version="1.1.0",
 )
 
@@ -53,6 +55,9 @@ app.add_middleware(
 )
 
 pipeline = AgenticTrainerPipeline()
+seed_compatibility_knowledge()
+
+app.include_router(rebootx_router)
 
 _EXT_TO_SUBDIR = {
     ".pdf": "pdf",
@@ -299,4 +304,5 @@ async def health():
         "vectors_stored": pipeline.chroma_store.count(),
         "ollama_host": settings.ollama_host,
         "ollama_model": settings.ollama_model,
+        "rebootx_documents": rebootx_knowledge.document_count,
     }

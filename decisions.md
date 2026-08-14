@@ -4,6 +4,20 @@ Living record of meaningful choices made while changing this codebase. Each entr
 
 ---
 
+## 2026-08-14 — Integrate RebootX as a module, not a second app
+
+**Decision:** Copy the RebootX assessment engine, scanner, compatibility JSON, and reports into `app/rebootx/` and expose them on the existing FastAPI + Atlas UI (`/refresh`). Do not run a second uvicorn/Streamlit stack.
+
+**Alternatives:** Git submodule + sidecar on another port; HTTP-call the original RebootX repo; rewrite scoring in TypeScript.
+
+**Why this:** Atlas already has JWT, CORS, Ollama, and Chroma. A second process would split auth and confuse the demo. RebootX’s value is the upgrade contract (capture → RAG → LLM/rules → risk engine → verdict), which Ask Atlas does not do.
+
+**Tradeoff accepted:** Two Chroma collections in one `chroma_data` dir (`enterprise_knowledge` vs `compatibility_knowledge`). RebootX still uses Chroma’s default embedder, not BGE, so upgrade docs are not mixed into `/ask`. Streamlit UI from the original RebootX repo is not ported. Local scan is sandboxed to this project so the API cannot walk `C:\`.
+
+**Files:** `app/rebootx/**`, `knowledge/rebootx/**`, `app/api.py`, `src/features/rebootx/tech-refresh-page.tsx`, `src/services/rebootx.service.ts`, `src/routes/index.tsx`, `src/constants/navigation.ts`, `requirements.txt` (`httpx`, `fpdf2`)
+
+---
+
 ## 2026-08-13 — Process: decision log, flow map, quiz gate
 
 **Decision:** Add always-on Cursor rules plus two repo-root docs (`decisions.md`, `Flow.md`) so later sessions cannot silently rewire the system.

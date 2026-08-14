@@ -11,6 +11,7 @@ import {
   History,
   Share2,
   ShieldCheck,
+  RefreshCw,
 } from "lucide-react";
 
 export interface NavItem {
@@ -24,6 +25,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Dashboard", icon: LayoutGrid, roles: ["admin", "user"] },
   { path: "/atlas", label: "Ask Atlas", icon: MessagesSquare, roles: ["admin", "user"] },
+  { path: "/refresh", label: "Tech refresh", icon: RefreshCw, roles: ["admin", "user"] },
   { path: "/repository", label: "Knowledge repository", icon: Library, roles: ["admin", "user"] },
   { path: "/upload", label: "Upload center", icon: UploadCloud, roles: ["admin", "user"] },
   { path: "/pipeline", label: "Pipeline monitor", icon: Workflow, roles: ["admin"] },

@@ -167,3 +167,51 @@ export interface LogEntry {
 
 /** App-level auth role — distinct from WorkspaceUser["role"] which is a Knowledge-repo permission tier. */
 export type AppRole = "admin" | "user";
+
+export type RebootxTech = "database" | "emr" | "python" | "mwaa";
+export type RebootxRiskLevel = "Low" | "Medium" | "High" | "Critical";
+
+export interface RebootxIntegrationDetail {
+  name: string;
+  consumer_technology?: string | null;
+  protocol?: string | null;
+  owner_team?: string | null;
+  notes?: string | null;
+}
+
+export interface RebootxUpgradeRequest {
+  technology_type: RebootxTech;
+  current_version: string;
+  target_version: string;
+  dependencies?: string[];
+  integrations?: string[];
+  integration_details?: RebootxIntegrationDetail[];
+  environment?: string;
+  notes?: string;
+}
+
+export interface RebootxIdentifiedRisk {
+  category: string;
+  risk_level: RebootxRiskLevel;
+  title: string;
+  explanation: string;
+  recommendation: string;
+  score?: number | null;
+  priority?: string | null;
+  validation_checks?: string[];
+}
+
+export interface RebootxAssessment {
+  technology_type: RebootxTech;
+  current_version: string;
+  target_version: string;
+  overall_risk: RebootxRiskLevel;
+  summary: string;
+  risks: RebootxIdentifiedRisk[];
+  recommended_actions: string[];
+  confidence: string;
+  analysis_mode: string;
+  overall_score?: number | null;
+  verdict?: string | null;
+  validation_checks?: string[];
+}

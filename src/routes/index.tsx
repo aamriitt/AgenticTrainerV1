@@ -11,6 +11,7 @@ import { NotFoundPage } from "@/pages/not-found-page";
 // only the Dashboard (the landing page) loads eagerly.
 import { DashboardPage } from "@/features/dashboard/dashboard-page";
 const AtlasWorkspacePage = lazy(() => import("@/features/chat/atlas-workspace-page").then((m) => ({ default: m.AtlasWorkspacePage })));
+const TechRefreshPage = lazy(() => import("@/features/rebootx/tech-refresh-page").then((m) => ({ default: m.TechRefreshPage })));
 const RepositoryPage = lazy(() => import("@/features/repository/repository-page").then((m) => ({ default: m.RepositoryPage })));
 const UploadCenterPage = lazy(() => import("@/features/upload/upload-center-page").then((m) => ({ default: m.UploadCenterPage })));
 const PipelineMonitorPage = lazy(() => import("@/features/pipeline/pipeline-monitor-page").then((m) => ({ default: m.PipelineMonitorPage })));
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "atlas", element: withSuspense(<AtlasWorkspacePage />) },
+      { path: "refresh", element: withSuspense(<TechRefreshPage />) },
       { path: "repository", element: withSuspense(<RepositoryPage />) },
       { path: "upload", element: withSuspense(<UploadCenterPage />) },
       // Admin-only surfaces — also enforced by a role guard in AppLayout.

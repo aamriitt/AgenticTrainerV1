@@ -186,18 +186,63 @@ Admin HTTP routes use `require_admin`. Users/logs/invite on the same Admin page 
 
 There is no per-request pipeline. Reloading uvicorn is required to pick up code changes unless `--reload` is on.
 
+Import also calls `seed_compatibility_knowledge()` which upserts RebootX JSON docs into Chroma collection `compatibility_knowledge` (separate from `enterprise_knowledge`).
+
 ---
 
-## This session (2026-08-13)
+## 8. Tech refresh / RebootX (live, this session)
 
-**Not modifying any runtime hop above.**
+Ask Atlas answers runbooks. RebootX scores a **proposed upgrade**. Same FastAPI process, different collection and services.
+
+```mermaid
+sequenceDiagram
+  participant UI as TechRefreshPage
+  participant Svc as rebootxService
+  participant API as rebootx/router.py
+  participant A as AssessmentService
+  participant K as KnowledgeService
+  participant R as RiskEngine
+  participant L as OllamaService
+
+  UI->>Svc: assess() or scanAndAssess()
+  Svc->>API: POST /rebootx/assess or /scan-and-assess + JWT
+  alt scan
+    API->>API: BridgeService.scan_and_build_request
+    Note over API: repository_scanner → UpgradeRequest
+  end
+  API->>A: assess(UpgradeRequest)
+  A->>K: retrieve(query, technology_type)
+  alt Ollama available
+    A->>L: generate JSON risks
+  else
+    A->>A: rules fallback
+  end
+  A->>R: apply_risk_engine (score, verdict, checks)
+  A-->>UI: UpgradeAssessment
+```
+
+| Order | File | Function |
+| --- | --- | --- |
+| 1 | `src/features/rebootx/tech-refresh-page.tsx` | form submit / scan |
+| 2 | `src/services/rebootx.service.ts` | `assess` / `scanAndAssess` |
+| 3 | `app/rebootx/router.py` | JWT + path sandbox (`scan_root` = repo) |
+| 4 | `app/rebootx/services/bridge_service.py` | only on scan |
+| 5 | `app/rebootx/services/assessment_service.py` | RAG + LLM/rules |
+| 6 | `app/rebootx/services/knowledge_service.py` | collection `compatibility_knowledge` |
+| 7 | `app/rebootx/services/risk_engine.py` | numeric score + verdict |
+
+Local scan/capture cannot leave `C:\Coding Practice\Agentic-TrainerV1`. GitHub capture still fetches public manifests.
+
+---
+
+## This session (2026-08-14)
+
+**Modifying / adding the RebootX hop above.** Ask Atlas `/ask` is unchanged.
 
 | Action | Path |
 | --- | --- |
-| Added | `.cursor/rules/decision-log.mdc` |
-| Added | `.cursor/rules/execution-flow.mdc` |
-| Added | `.cursor/rules/quiz-gate.mdc` |
-| Added | `decisions.md` (historical + process decisions) |
-| Added | `Flow.md` (this file) |
-
-If a later session changes `/ask`, ingest, auth, or a service that is still mocked, replace this section with the exact hop being edited and keep the diagrams above in sync.
+| Added | `app/rebootx/**` (engine, router, scanner, services) |
+| Added | `knowledge/rebootx/**` (python, emr, mwaa, database JSON) |
+| Added | `src/features/rebootx/tech-refresh-page.tsx`, `src/services/rebootx.service.ts` |
+| Wired | `app/api.py` includes `/rebootx/*`; `/health` reports `rebootx_documents` |
+| Nav | `/refresh` for user + admin |

@@ -1,0 +1,19 @@
+{
+  "_comment": "Copy this file to add knowledge. Remove fields marked optional if not needed. Reload with scripts/ingest_knowledge.py after editing.",
+  "documents": [
+    {
+      "id": "unique-kebab-case-id",
+      "text": "Write 3-8 sentences of specific compatibility knowledge. Include exact version numbers, breaking changes, affected libraries/functions, and what must be verified. Be concrete - name error messages and settings where possible.",
+      "metadata": {
+        "technology_type": "python",
+        "source": "Official Release Notes / Runbook Name",
+        "topic": "version",
+        "version_from": "3.9",
+        "version_to": "3.12",
+        "risk_hint": "Medium",
+        "validation_checks": ["regression", "integration", "rollback"],
+        "domain": "insurance"
+      }
+    }
+  ]
+}

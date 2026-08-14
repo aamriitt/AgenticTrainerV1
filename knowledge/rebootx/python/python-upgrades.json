@@ -1,0 +1,88 @@
+{
+  "documents": [
+    {
+      "id": "python-39-to-312-breaking",
+      "text": "Python 3.9 to 3.12 upgrade breaking changes: distutils module removed in 3.12 (use setuptools instead). imp module removed. Deprecated asyncio.get_event_loop() without running loop raises DeprecationWarning in 3.10+. typing module changes: PEP 585 generic types (list[str] instead of List[str]) and PEP 604 unions (str | None). Many packages require minimum version bumps: numpy>=1.23, pandas>=2.0, cryptography>=41, requests>=2.28. Security-sensitive apps should review hashlib and ssl default protocol changes.",
+      "metadata": {
+        "technology_type": "python",
+        "source": "Python 3.12 What's New",
+        "topic": "version",
+        "version_from": "3.9",
+        "version_to": "3.12",
+        "risk_hint": "High",
+        "validation_checks": ["build", "regression", "integration"]
+      }
+    },
+    {
+      "id": "python-310-to-312",
+      "text": "Python 3.10 to 3.12 specific changes: Pattern matching (match/case) stable since 3.10. 3.12 introduces improved error messages (carets pointing to exact token), per-interpreter GIL (experimental), and removal of deprecated unittest methods. f-string parsing changes may affect dynamic f-string construction. Ensure CI/CD pipelines update python-version matrix to include 3.12 test runs before migration.",
+      "metadata": {
+        "technology_type": "python",
+        "source": "Python 3.12 Release Notes",
+        "topic": "version",
+        "version_from": "3.10",
+        "version_to": "3.12",
+        "risk_hint": "Medium",
+        "validation_checks": ["regression", "integration"]
+      }
+    },
+    {
+      "id": "python-dependency-wheels",
+      "text": "Python dependency risks during runtime upgrade: requirements.txt and lock files must be regenerated with target interpreter (pip compile --python-version 3.12). Wheels built for cp39 may not exist for cp312 on all platforms — source builds required. C-extension packages (lxml, psycopg2, grpcio, numpy, pandas) often require rebuild or version bump. Test suites using deprecated unittest patterns or nose framework may fail. pip 24+ changed dependency resolver behavior — pin pip version during migration.",
+      "metadata": {
+        "technology_type": "python",
+        "source": "Dependency Audit Guide",
+        "topic": "dependency",
+        "risk_hint": "High",
+        "validation_checks": ["build", "regression", "integration"]
+      }
+    },
+    {
+      "id": "python-integration-airflow",
+      "text": "Python integration risks with Airflow/MWAA: Airflow 2.x provider packages pin specific Python library versions. Upgrading Python runtime in MWAA requires updating requirements.txt constraints file. DAGs using deprecated Python syntax (e.g., @task with old typing) may fail parsing. Virtualenv operators create isolated envs — ensure base image Python matches. KubernetesPodOperator docker images must use updated Python base tags.",
+      "metadata": {
+        "technology_type": "python",
+        "source": "Airflow Python Compatibility",
+        "topic": "integration",
+        "risk_hint": "Medium",
+        "validation_checks": ["integration", "regression"]
+      }
+    },
+    {
+      "id": "python-config-docker",
+      "text": "Python runtime configuration for containerized deployments: Base Docker images must be updated (python:3.12-slim). PYTHONPATH and virtualenv paths change with new site-packages location. pyproject.toml and setup.cfg may need python_requires = '>=3.12' update. mypy, pylint, black, and ruff linter configs may flag new syntax issues. ASGI/WSGI server configs (gunicorn, uvicorn) should update worker class settings for 3.12.",
+      "metadata": {
+        "technology_type": "python",
+        "source": "Container Deployment Runbook",
+        "topic": "config",
+        "risk_hint": "Medium",
+        "validation_checks": ["build", "integration", "regression"]
+      }
+    },
+    {
+      "id": "python-common-libs",
+      "text": "Common Python library compatibility matrix for 3.12: Django>=4.2 supports 3.12. Flask>=2.3 compatible. FastAPI>=0.100 requires Pydantic v2 for 3.12. boto3/botocore latest versions support 3.12. pandas 2.1+ required. scikit-learn 1.3+ required. TensorFlow 2.15+ for 3.12 support. PyTorch 2.1+ for 3.12 wheels. Always check PyPI classifiers for Requires-Python before upgrading.",
+      "metadata": {
+        "technology_type": "python",
+        "source": "Library Compatibility Matrix",
+        "topic": "dependency",
+        "risk_hint": "Medium",
+        "validation_checks": ["build", "regression", "integration"]
+      }
+    },
+    {
+      "id": "python-numpy-2-breaking",
+      "text": "NumPy 2.0 (released 2024) is a major release with breaking API and ABI changes. Packages compiled against NumPy 1.x must be rebuilt for NumPy 2.0 or they raise ImportError on module load. Removed or renamed APIs include np.float_, np.int0, np.bool8, and np.in1d; np.round_ is replaced by np.round. Downstream libraries need minimum versions: pandas>=2.2.2, scikit-learn>=1.4.2, scipy>=1.13 for NumPy 2.0 support. Pin numpy<2.0 as a temporary mitigation if any dependency is not yet compatible.",
+      "metadata": {
+        "technology_type": "python",
+        "source": "NumPy 2.0 Migration Guide",
+        "topic": "dependency",
+        "version_from": "1.x",
+        "version_to": "2.0",
+        "risk_hint": "High",
+        "validation_checks": ["build", "regression", "integration"],
+        "domain": "general"
+      }
+    }
+  ]
+}

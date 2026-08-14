@@ -1,0 +1,61 @@
+{
+  "documents": [
+    {
+      "id": "emr-6-to-7-spark",
+      "text": "Amazon EMR 6.x to 7.x upgrade bundles Spark 3.4+ and Hadoop 3.3+. Jobs compiled against Spark 2.x APIs will fail at runtime with NoClassDefFoundError. Spark SQL behavior changes: ANSI mode enabled by default in Spark 3.4, which rejects certain implicit casts. Hive metastore schema changes require running AWS-provided migration scripts before upgrade. YARN resource manager behavior differs on Amazon Linux 2023; executor memory and overhead settings must be revalidated. Custom bootstrap actions referencing Amazon Linux 2 packages will break.",
+      "metadata": {
+        "technology_type": "emr",
+        "source": "AWS EMR 7.x Migration Guide",
+        "topic": "version",
+        "version_from": "6.10",
+        "version_to": "7.0",
+        "risk_hint": "High",
+        "validation_checks": ["regression", "integration", "data"]
+      }
+    },
+    {
+      "id": "emr-6-to-7-hive",
+      "text": "EMR 7.x Hive compatibility: Hive 3.1.x ships with EMR 7. Hive LLAP settings and Tez configuration differ from EMR 6.x defaults. Custom SerDes and UDFs compiled for older Hive versions need recompilation. Hive Metastore on RDS requires schema upgrade script execution. ACID table format changes may affect transactional table reads. Beeline connection strings and JDBC URLs change with new release label format.",
+      "metadata": {
+        "technology_type": "emr",
+        "source": "AWS EMR Hive Migration Notes",
+        "topic": "dependency",
+        "risk_hint": "High",
+        "validation_checks": ["build", "data", "regression"]
+      }
+    },
+    {
+      "id": "emr-integration-airflow",
+      "text": "EMR integration risks with Airflow/MWAA: EmrAddStepsOperator and EmrCreateJobFlowOperator must use updated release label format (emr-7.x.x). Step Functions pipelines referencing old release labels will fail on cluster creation. S3A connector settings changed; jobs using deprecated s3n:// paths must migrate to s3a://. CloudWatch log group paths change between major EMR versions — update log subscription filters. IAM roles for EMR service and EC2 instances may need policy updates for AL2023.",
+      "metadata": {
+        "technology_type": "emr",
+        "source": "Integration Checklist",
+        "topic": "integration",
+        "risk_hint": "Medium",
+        "validation_checks": ["integration", "regression"]
+      }
+    },
+    {
+      "id": "emr-config-memory",
+      "text": "EMR 7.x configuration changes: Default garbage collector settings changed for Spark executors. spark.dynamicAllocation settings behave differently with YARN on AL2023. Instance fleet configurations may need instance type updates as some AL2-only types are unavailable. EMR managed scaling policies require retuning due to changed node provisioning times. HDFS replication factor and block size defaults unchanged but local disk paths differ on AL2023.",
+      "metadata": {
+        "technology_type": "emr",
+        "source": "EMR Configuration Best Practices",
+        "topic": "config",
+        "risk_hint": "Medium",
+        "validation_checks": ["performance", "regression"]
+      }
+    },
+    {
+      "id": "emr-spark-scala-deps",
+      "text": "Spark dependency risks on EMR upgrade: Scala 2.12 is required for Spark 3.4 (Scala 2.11 no longer supported). JARs compiled with older Scala versions will not load. Maven coordinates for spark-sql, spark-hive artifacts change between Spark versions. Delta Lake, Hudi, and Iceberg table format libraries must match Spark 3.4 compatible versions. fat JAR shading conflicts common when mixing old and new dependency trees.",
+      "metadata": {
+        "technology_type": "emr",
+        "source": "Spark Dependency Guide",
+        "topic": "dependency",
+        "risk_hint": "High",
+        "validation_checks": ["build", "regression", "integration"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "documents": [
+    {
+      "id": "mwaa-2-to-3-airflow",
+      "text": "Amazon MWAA 2.x to 3.x upgrade requires Airflow 2.7+ as baseline. Deprecated operators removed or renamed: DummyOperator renamed to EmptyOperator, days_ago() helper removed from default_args. Custom plugins using Flask-AppBuilder 3.x APIs may break — FAB 4.x required. Requirements.txt must use constraints compatible with MWAA 3.x provider bundle (amazon, cncf.kubernetes versions pinned). Scheduler HA behavior changed — validate DAG parsing performance after upgrade.",
+      "metadata": {
+        "technology_type": "mwaa",
+        "source": "AWS MWAA 3.x Upgrade Guide",
+        "topic": "version",
+        "version_from": "2.5",
+        "version_to": "3.0",
+        "risk_hint": "High",
+        "validation_checks": ["regression", "integration", "build"]
+      }
+    },
+    {
+      "id": "mwaa-dag-compatibility",
+      "text": "MWAA DAG compatibility risks: DAGs using deprecated import paths (airflow.operators.python_operator) must migrate to airflow.operators.python. Timetable-based scheduling replaces cron in some cases. Dataset-driven scheduling (Airflow 2.4+) requires DAG refactoring if using custom timetables. TaskFlow API (@task decorator) syntax changes between Airflow minor versions. XCom serialization format changes may break cross-task data passing for complex objects.",
+      "metadata": {
+        "technology_type": "mwaa",
+        "source": "Airflow DAG Migration Guide",
+        "topic": "dependency",
+        "risk_hint": "High",
+        "validation_checks": ["regression", "integration", "data"]
+      }
+    },
+    {
+      "id": "mwaa-integration-emr",
+      "text": "MWAA integration risks with EMR and AWS services: DAGs triggering EMR steps must use EmrAddStepsOperator versions compatible with target EMR release. Secrets Manager backend configuration syntax changed in Airflow 2.7+. S3 log path conventions differ between MWAA versions — update any hardcoded log paths. Cross-account IAM roles need policy review for new MWAA service-linked role requirements. Lambda invoke operators require updated boto3 provider version.",
+      "metadata": {
+        "technology_type": "mwaa",
+        "source": "Airflow AWS Integration Notes",
+        "topic": "integration",
+        "risk_hint": "Medium",
+        "validation_checks": ["integration", "regression"]
+      }
+    },
+    {
+      "id": "mwaa-config-requirements",
+      "text": "MWAA 3.x configuration changes: requirements.txt must not pin apache-airflow itself (MWAA manages Airflow version). Constraints file format updated — use --constraint flag with MWAA-published URL. plugins.zip structure unchanged but plugin entry points validated more strictly. airflow.cfg overrides via MWAA console have new keys for scheduler parsing parallelism. Environment class (mw1.small/medium/large) may need upsizing for larger DAG counts post-upgrade.",
+      "metadata": {
+        "technology_type": "mwaa",
+        "source": "MWAA Configuration Reference",
+        "topic": "config",
+        "risk_hint": "Medium",
+        "validation_checks": ["build", "integration", "performance"]
+      }
+    },
+    {
+      "id": "mwaa-provider-packages",
+      "text": "Airflow provider package compatibility for MWAA 3.x: apache-airflow-providers-amazon>=8.0 required. apache-airflow-providers-cncf-kubernetes version must match MWAA constraints. Do not pin transitive dependencies (urllib3, boto3) unless tested against MWAA constraint file. Provider packages install additional operators — verify no naming conflicts with custom operators. Use mwaa-local-runner Docker image matching target MWAA version for local testing.",
+      "metadata": {
+        "technology_type": "mwaa",
+        "source": "MWAA Provider Compatibility",
+        "topic": "dependency",
+        "risk_hint": "High",
+        "validation_checks": ["build", "integration", "regression"]
+      }
+    }
+  ]
+}
