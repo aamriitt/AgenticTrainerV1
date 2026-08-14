@@ -17,22 +17,35 @@ export interface NavItem {
   path: string;
   label: string;
   icon: LucideIcon;
-  /** Which app roles can see this nav entry / route. Admin-only surfaces are hidden for "user". */
+  /** Which app roles can see this nav entry / route.
+   * admin: everything. sme: everything except admin-only ops surfaces.
+   * user: Ask Atlas + Dashboard + History + Graph only — no Repository, no Upload. */
   roles: AppRole[];
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { path: "/", label: "Dashboard", icon: LayoutGrid, roles: ["admin", "user"] },
-  { path: "/atlas", label: "Ask Atlas", icon: MessagesSquare, roles: ["admin", "user"] },
-  { path: "/repository", label: "Knowledge repository", icon: Library, roles: ["admin", "user"] },
-  { path: "/upload", label: "Upload center", icon: UploadCloud, roles: ["admin", "user"] },
+  { path: "/", label: "Dashboard", icon: LayoutGrid, roles: ["admin", "sme", "user"] },
+  { path: "/atlas", label: "Ask Atlas", icon: MessagesSquare, roles: ["admin", "sme", "user"] },
+  { path: "/repository", label: "Knowledge repository", icon: Library, roles: ["admin", "sme"] },
+  { path: "/upload", label: "Upload center", icon: UploadCloud, roles: ["admin", "sme"] },
   { path: "/pipeline", label: "Pipeline monitor", icon: Workflow, roles: ["admin"] },
   { path: "/agents", label: "Agent monitor", icon: BotMessageSquare, roles: ["admin"] },
   { path: "/analytics", label: "Analytics", icon: BarChart3, roles: ["admin"] },
-  { path: "/history", label: "Conversation history", icon: History, roles: ["admin", "user"] },
-  { path: "/graph", label: "Knowledge graph", icon: Share2, roles: ["admin", "user"] },
+  { path: "/history", label: "Conversation history", icon: History, roles: ["admin", "sme", "user"] },
+  { path: "/graph", label: "Knowledge graph", icon: Share2, roles: ["admin", "sme", "user"] },
   { path: "/admin", label: "Admin", icon: ShieldCheck, roles: ["admin"] },
 ];
 
-/** Admin-only route paths — enforced both in the sidebar and as a route guard. */
-export const ADMIN_ONLY_PATHS = NAV_ITEMS.filter((i) => !i.roles.includes("user")).map((i) => i.path);
+export const ROLE_LABEL: Record<AppRole, string> = {
+  admin: "Admin",
+  sme: "SME",
+  user: "User",
+};
+
+/** Returns the roles allowed to view a given pathname, or null if the path isn't nav-guarded. */
+export function getAllowedRoles(pathname: string): AppRole[] | null {
+  const match = NAV_ITEMS.find((item) =>
+    item.path === "/" ? pathname === "/" : pathname === item.path || pathname.startsWith(`${item.path}/`)
+  );
+  return match ? match.roles : null;
+}

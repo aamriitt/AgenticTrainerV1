@@ -1,208 +1,147 @@
-# Agentic Trainer
+# Agentic Trainer — powered by Atlas
 
-An enterprise knowledge assistant that learns from SME training videos, PDFs, SOPs, DOCX files,
-manuals, and FAQs — answers questions naturally, cites its sources precisely, refuses to
-hallucinate when evidence is insufficient, and improves over time through an SME-gated feedback
-loop.
+An enterprise knowledge-enablement platform. Employees ask natural-language questions
+and get answers grounded in internal documents, runbooks, KT recordings, and SOPs
+through **Atlas**, the embedded AI assistant.
 
-Built as a multi-agent pipeline (11 agents) orchestrated with LangGraph, using local models
-(Gemma 3 via Ollama, BAAI/bge-base-en-v1.5 embeddings) so no data leaves your machine.
+Built with React 19, TypeScript, Vite, Tailwind CSS, TanStack Query, and Framer Motion.
 
 ---
 
-## Architecture
+## 1. Prerequisites
 
-```
-Documents (PDF/DOCX/TXT/FAQ/Video)
-        │
-        ▼
-  Ingestion Agent  ──►  Cleaning Agent  ──►  Chunking Agent  ──►  Embedding Agent  ──►  ChromaDB
-                                                                                            │
-                                                                                            ▼
-Question ──► Intent Agent ──► Retrieval Agent (hybrid BM25+vector) ──► Verification Agent
-                                                                              │
-                                                    ┌─────────────────────────┴───────────────┐
-                                                    ▼                                          ▼
-                                          sufficient evidence                       insufficient evidence
-                                                    │                                          │
-                                            Reasoning Agent (Gemma 3)                "I couldn't find this
-                                                    │                                 in the enterprise
-                                            Citation Agent                            knowledge."
-                                                    │
-                                                 Answer
-                                                    │
-                                            👍 / 👎 Feedback Agent
-                                                    │
-                                          SME Validation Agent (admin panel)
-                                                    │
-                                          Approved corrections re-embedded
-                                          into the knowledge base
+- **Node.js v18 or newer** — check with `node -v`. Get it at [nodejs.org](https://nodejs.org) if needed.
+- That's it for the app itself. If you want Ask Atlas to give real (not scripted) answers, see [§4](#4-connecting-a-real-llm-optional) — you'll optionally also want **[Ollama](https://ollama.com/download)** installed.
+
+## 2. Running it
+
+```bash
+unzip atlas-trainer-project.zip
+cd atlas-trainer
+npm install
+npm run dev
 ```
 
-See `agents/*.py` — each of the 11 agents from the design doc is its own module with a docstring
-explaining its responsibility and design decisions.
+Open the URL it prints — usually **http://localhost:5173**. You'll land on `/login`.
 
----
+To build a production bundle instead of running the dev server:
 
-## Prerequisites
+```bash
+npm run build      # outputs to dist/
+npm run preview    # serves the built bundle locally to sanity-check it
+```
 
-| Requirement | Why | Install |
+## 3. Signing in — three account types
+
+`/login` shows three doors. Any name/email/password gets you in (there's no real
+backend auth — this is a frontend prototype) — what matters is **which door you pick**,
+since that decides your role and what you can see:
+
+| Door | Role | Can access |
 |---|---|---|
-| Python 3.10+ | Runtime | — |
-| [Ollama](https://ollama.com) | Runs Gemma 3 locally for reasoning + intent classification | `curl -fsSL https://ollama.com/install.sh \| sh` (Linux/Mac) or download for Windows |
-| ffmpeg | Required by Whisper for video/audio transcription | `sudo apt install ffmpeg` (Linux), `brew install ffmpeg` (Mac) |
-| Tesseract OCR | Fallback text extraction for scanned PDF pages | `sudo apt install tesseract-ocr` (Linux), `brew install tesseract` (Mac) |
+| **SME sign-in** | `sme` | Dashboard, Ask Atlas, Knowledge Repository, Upload Center, Conversation History, Knowledge Graph |
+| **User sign-in** | `user` | Dashboard, Ask Atlas, Conversation History, Knowledge Graph — **no Repository, no Upload Center** |
+| **Admin console sign-in** | `admin` | Everything, including Pipeline Monitor, Agent Monitor, Analytics, and Admin |
 
-After installing Ollama:
+Access is enforced at the routing level, not just hidden in the sidebar — a `user`-role
+account typing `/repository` or `/upload` directly into the URL bar gets redirected back
+to the dashboard.
 
-```bash
-ollama serve                # starts the local Ollama server (leave running)
-ollama pull gemma3          # downloads the Gemma 3 model (one-time, several GB)
-```
+## 4. Connecting a real LLM (optional)
 
----
+By default, Ask Atlas runs in **demo mode** — it answers using a small set of
+scripted responses plus a real department-filtering search over your knowledge base (see
+§5). It clearly labels itself "[Demo mode]" so nothing is passed off as more than it is.
 
-## Installation
+To make it call a **real model**, open Ask Atlas and click **"Connect LLM"** in the
+top-right of the toolbar. Two options:
 
-```bash
-git clone <this-repo>
-cd agentic_trainer
+### Option A — Ollama (free, local, default)
 
-python3 -m venv venv
-source venv/bin/activate    # Windows: venv\Scripts\activate
+1. Install [Ollama](https://ollama.com/download)
+2. Pull a model: `ollama pull gemma2` (or `gemma2:2b` for a lighter/faster option)
+3. Start Ollama with browser access allowed:
+   - **Mac/Linux:** `OLLAMA_ORIGINS=* ollama serve`
+   - **Windows (PowerShell):**
+     ```powershell
+     $env:OLLAMA_ORIGINS="*"
+     ollama serve
+     ```
+     If you get "address already in use," Ollama's already running as a background
+     app — instead, set `OLLAMA_ORIGINS` as a **User** environment variable (search
+     "Environment Variables" in the Start menu → "Edit environment variables for your
+     account" → New → Name: `OLLAMA_ORIGINS`, Value: `*`), then fully quit and reopen
+     Ollama (or restart your PC) for it to take effect.
+4. In the app's "Connect LLM" modal, leave it on the Ollama tab, confirm the URL
+   (`http://localhost:11434`) and model (`gemma2`), click **Connect**.
 
-pip install -r requirements.txt
+Nothing leaves your machine with this option — no API key, no cost, no rate limits.
 
-cp .env.example .env        # then edit .env if you want non-default settings
-```
+### Option B — Anthropic API (cloud)
 
-The first time you run the app, two more downloads happen automatically (no action needed, just
-expect a delay and an internet connection the first time):
-- `sentence-transformers` downloads the `BAAI/bge-base-en-v1.5` embedding model (~440MB)
-- `openai-whisper` downloads its model weights the first time you ingest a video file
+Get a key from [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys),
+switch to the Anthropic tab in the "Connect LLM" modal, paste it in, click Connect. The
+key is stored only in your browser's `localStorage` and sent only to
+`api.anthropic.com` — never to any server of ours.
 
----
+> Gemma via Ollama is noticeably weaker and slower than Claude, especially on a laptop
+> without a GPU. If a demo is high-stakes, test your exact setup once beforehand rather
+> than debugging it live.
 
-## Running the app
+## 5. How retrieval works
 
-You need **two processes running at once**, in two terminals:
+There's no real vector database or document-embedding pipeline yet (see
+[Known limitations](#7-known-limitations) below). What *is* real:
 
-**Terminal 1 — backend API:**
-```bash
-uvicorn app.api:app --reload --port 8000
-```
+- **Department-scoped retrieval.** Every document — seed data or freshly uploaded — is
+  tagged with a Department and Branch. Ask Atlas something like *"show me documents
+  from Analytics"* and it genuinely filters the knowledge store by that field and
+  returns only matching documents, in both demo mode and live-LLM mode. If nothing
+  matches, it says so rather than inventing an answer.
+- **Live grounding context.** When a real LLM is connected, its system prompt includes
+  a full directory of every document (title, department, branch, SME) plus hand-written
+  source excerpts, so its answers stay consistent with what the rest of the app cites.
 
-**Terminal 2 — frontend UI:**
-```bash
-streamlit run app/frontend/streamlit_app.py
-```
+## 6. Uploading knowledge (SME / Admin only)
 
-Then open the URL Streamlit prints (usually `http://localhost:8501`).
+Go to **Upload Center**, drag in a file (or click "Add Knowledge File"). Before
+processing starts, you'll be asked to tag it with a **Department**, **Branch**, and
+optional **Specification/notes** — this is what makes department-scoped retrieval work
+correctly and avoids cross-department mismatches. Once the simulated pipeline finishes
+(chunked → indexed), the file is registered into the knowledge store and immediately
+shows up in the Repository and is retrievable through Ask Atlas.
 
----
+Uploads persist in your browser's `localStorage`, so they survive a page refresh but are
+local to that browser — they won't appear on a different machine or for a different
+person.
 
-## Using it
+## 7. Known limitations
 
-1. **Add knowledge** — in the sidebar, upload a PDF, DOCX, TXT/FAQ file, or video. Click "Index
-   this file". A few sample files are already in `knowledge/` to try immediately.
-2. **Ask questions** — type in the chat box. Answers come with an expandable "Sources" section
-   showing exact page/section/timestamp citations.
-3. **Give feedback** — 👍/👎 each answer. Thumbs-down prompts you for what should have been said.
-4. **SME review** — switch to "Admin (SME Review)" in the sidebar to see the queue of pending
-   corrections. Approve or reject each one, then click "Re-index approved corrections" to fold
-   approved fixes back into the knowledge base.
+Being upfront about these so nothing surprises you mid-demo:
 
----
+- **No real document parsing.** Upload Center simulates chunking/embedding progress —
+  it does not actually extract or embed the file's contents.
+- **No real vector database.** Department filtering works on real structured metadata;
+  topic-based "grounding" for the built-in seed documents is a hand-written text blob
+  standing in for actual retrieval.
+- **The six-agent architecture shown in Agent Monitor is illustrative**, not live —
+  Pipeline Monitor and Agent Monitor display static/simulated data, not a running
+  LangGraph orchestration.
+- **No real backend auth.** Login accepts any credentials; role is decided purely by
+  which door you picked. Sessions live in `localStorage`, not a server.
 
-## Testing ingestion/agents directly (no UI needed)
-
-Every agent is independently testable from a Python shell:
-
-```python
-from app.pipeline import AgenticTrainerPipeline
-
-pipeline = AgenticTrainerPipeline()
-pipeline.ingest_and_index("knowledge/sop/cpi_sop.docx")
-
-result, feedback_id = pipeline.ask("How do I create an iFlow?")
-print(result.answer)
-print([c.locator for c in result.citations])
-```
-
-Individual agents can also be unit-tested in isolation — see `app/agents/*.py`; most accept an
-injectable model/client so you can substitute a stub in tests without needing Ollama or a
-downloaded embedding model running.
-
----
-
-## Configuration
-
-All tunable settings live in `.env` (copy from `.env.example`). Key ones:
-
-| Setting | Default | Effect |
-|---|---|---|
-| `OLLAMA_MODEL` | `gemma3` | Which local model handles reasoning + intent classification |
-| `EMBEDDING_MODEL` | `BAAI/bge-base-en-v1.5` | Swap to `nomic-ai/nomic-embed-text-v1.5` if preferred |
-| `CHUNK_SIZE` / `CHUNK_OVERLAP` | `500` / `100` | Chunking granularity |
-| `RETRIEVAL_TOP_K` | `5` | How many chunks to retrieve per question |
-| `HYBRID_ALPHA` | `0.5` | 0 = keyword-only search, 1 = vector-only, 0.5 = balanced |
-| `MIN_CONTEXT_CHUNKS` / `MIN_RELEVANCE_SCORE` | `2` / `0.35` | Anti-hallucination gate thresholds — raise these to make the system more conservative about refusing |
-| `WHISPER_MODEL_SIZE` | `base` | Larger = more accurate transcription, slower |
-
----
-
-## Project structure
+## 8. Project structure
 
 ```
-agentic_trainer/
-├── app/
-│   ├── main.py                 # (reserved — API entrypoint is api.py)
-│   ├── config.py               # Central settings, loaded from .env
-│   ├── api.py                  # FastAPI endpoints
-│   ├── pipeline.py             # LangGraph orchestration wiring all agents together
-│   ├── agents/                 # One file per agent (see architecture diagram above)
-│   ├── database/
-│   │   ├── chroma.py           # Vector store wrapper
-│   │   └── sqlite.py           # Feedback/validation storage
-│   ├── services/
-│   │   └── llm_client.py       # Shared Ollama client
-│   ├── utils/
-│   │   ├── logger.py
-│   │   └── schemas.py          # Shared data models passed between agents
-│   └── frontend/
-│       └── streamlit_app.py    # Chat UI + admin review panel
-├── knowledge/                  # Drop source files here (pdf/videos/faq/sop subfolders)
-├── chroma_data/                # ChromaDB persistent storage (auto-created)
-├── feedback.db                 # SQLite feedback/validation store (auto-created)
-├── requirements.txt
-└── .env.example
+src/
+  components/     UI primitives, branding, and feature-specific components
+  constants/      Mock data, navigation config, departments/branches
+  contexts/       Auth, theme, and toast providers
+  features/       One folder per page/surface (dashboard, chat, repository, ...)
+  hooks/          Data-fetching and UI hooks
+  layouts/        App shell — sidebar, topbar, route guard
+  pages/          Login screens (SME / User / Admin) and 404
+  routes/         React Router route table
+  services/       Mock API services + the LLM client + knowledge store
+  types/          Shared TypeScript types
 ```
-
----
-
-## Known limitations / what to check first if something doesn't work
-
-- **"Failed to reach Ollama"** — make sure `ollama serve` is running in a separate terminal and
-  `ollama pull gemma3` has completed.
-- **First `/ask` or `/upload` call is slow** — the embedding model download happens on first use;
-  subsequent calls are fast.
-- **Video ingestion is slow on CPU** — Whisper is compute-heavy. A GPU machine is strongly
-  recommended if video is a significant part of your corpus; for demo purposes, keep sample
-  videos short (under a few minutes).
-- **BM25 index staleness** — the keyword index rebuilds from whatever's currently in ChromaDB on
-  the next retrieval call after any re-indexing; no action needed, just note there's a small
-  rebuild cost right after adding new documents.
-
----
-
-## Suggested next steps for scaling to production
-
-- Swap ChromaDB's `PersistentClient` for a hosted/clustered vector DB (Qdrant, pgvector, Pinecone)
-  if the corpus grows large or needs multi-instance access.
-- Add authentication (Keycloak/Auth0) and role-based access (Admin/SME/Employee) in front of the
-  FastAPI layer.
-- Containerize (`Dockerfile` + `docker-compose.yml` covering the API, Streamlit, and Ollama) for
-  reproducible deployment to a cloud VM.
-- Add conversation memory so multi-turn follow-up questions retain context.
-- Add an evaluation harness (faithfulness, context precision, answer relevance) to track answer
-  quality over time as the knowledge base grows.

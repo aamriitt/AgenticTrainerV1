@@ -22,6 +22,10 @@ export interface KnowledgeItem {
   embeddingStatus: EmbeddingStatus;
   lastIndexedAt: string | null;
   sizeLabel?: string;
+  /** Department/branch metadata captured at upload time — used to scope retrieval and avoid cross-department mismatches. */
+  department: string;
+  branch: string;
+  specification?: string;
 }
 
 export interface UploadJob {
@@ -31,6 +35,9 @@ export interface UploadJob {
   sizeLabel: string;
   stage: UploadStage;
   progress: number;
+  department?: string;
+  branch?: string;
+  specification?: string;
 }
 
 export type UploadStage =
@@ -163,5 +170,6 @@ export interface LogEntry {
   message: string;
 }
 
-/** App-level auth role — distinct from WorkspaceUser["role"] which is a Knowledge-repo permission tier. */
-export type AppRole = "admin" | "user";
+/** App-level auth role — distinct from WorkspaceUser["role"] which is a Knowledge-repo permission tier.
+ * admin: full access. sme: can upload/manage knowledge. user: Ask Atlas + History + Graph only. */
+export type AppRole = "admin" | "sme" | "user";

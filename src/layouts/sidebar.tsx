@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { LogOut, ShieldCheck, User as UserIcon } from "lucide-react";
-import { NAV_ITEMS } from "@/constants/navigation";
+import { NAV_ITEMS, ROLE_LABEL } from "@/constants/navigation";
 import { AtlasLogoMark, AtlasWordmark } from "@/components/branding/atlas-logo";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/contexts/toast-context";
@@ -91,7 +91,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
                 Log out
                 <span className="ml-auto flex items-center gap-1 rounded-full bg-card border border-border px-1.5 py-0.5 text-[9.5px] font-bold uppercase text-muted-foreground">
                   {user.role === "admin" ? <ShieldCheck className="h-2.5 w-2.5" /> : <UserIcon className="h-2.5 w-2.5" />}
-                  {user.role}
+                  {ROLE_LABEL[user.role]}
                 </span>
               </span>
             )}

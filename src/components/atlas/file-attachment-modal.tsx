@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Paperclip, X, FileText, Check, Plus, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MOCK_KNOWLEDGE_ITEMS } from "@/constants/mock-data";
+import { knowledgeStore } from "@/services/knowledge-store.service";
 import { useToast } from "@/contexts/toast-context";
 import type { KnowledgeItem } from "@/types";
 
@@ -19,7 +19,7 @@ export function FileAttachmentModal({ isOpen, onClose, onSelect }: FileAttachmen
   if (!isOpen) return null;
 
   const handleConfirm = () => {
-    const item = MOCK_KNOWLEDGE_ITEMS.find((k) => k.id === selectedId);
+    const item = knowledgeStore.list().find((k) => k.id === selectedId);
     if (item) {
       onSelect(item);
       toast({
@@ -63,7 +63,7 @@ export function FileAttachmentModal({ isOpen, onClose, onSelect }: FileAttachmen
           </div>
 
           <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 mb-4">
-            {MOCK_KNOWLEDGE_ITEMS.map((item) => {
+            {knowledgeStore.list().map((item) => {
               const isSelected = selectedId === item.id;
               return (
                 <div

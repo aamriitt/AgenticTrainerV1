@@ -33,6 +33,7 @@ export function KnowledgeCard({ item, onClick }: KnowledgeCardProps) {
         {item.sme} · {new Date(item.uploadedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
       </p>
       <div className="flex flex-wrap gap-1">
+        <Badge variant="indigo">{item.department}</Badge>
         {item.tags.map((tag) => (
           <Badge key={tag}>{tag}</Badge>
         ))}

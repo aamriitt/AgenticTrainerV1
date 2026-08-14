@@ -9,23 +9,27 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/contexts/toast-context";
 
-/** SME sign-in — contributors who upload and manage knowledge (was "Team member"). */
-export function LoginPage() {
+/**
+ * Basic "User" sign-in — read-only-ish access: Dashboard, Ask Atlas,
+ * Conversation history, Knowledge graph. No Repository, no Upload Center.
+ * Visually distinct (teal accent) from the SME's indigo/emerald theme.
+ */
+export function BasicUserLoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { toast } = useToast();
-  const [name, setName] = useState("Priya Sharma");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    login({ name: name.trim() || "SME Contributor", email: email.trim() || "sme@company.com", role: "sme" });
-    toast({ title: `Welcome back, ${name.trim() || "there"}!`, description: "Signed in to Agentic Trainer as an SME.", type: "success" });
+    login({ name: name.trim() || "Team Member", email: email.trim() || "user@company.com", role: "user" });
+    toast({ title: `Welcome, ${name.trim() || "there"}!`, description: "Signed in to Agentic Trainer.", type: "success" });
     navigate("/");
   }
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-atlas-indigo/5 via-background to-atlas-emerald/5 px-4">
+    <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-teal-500/5 via-background to-cyan-500/5 px-4">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -38,27 +42,29 @@ export function LoginPage() {
 
         <div className="mb-7 flex flex-col items-center text-center">
           <AtlasLogo variant="mark" size={44} className="mb-3" />
-          <h1 className="text-lg font-extrabold">SME sign-in</h1>
-          <p className="mt-1 text-xs text-muted-foreground">Upload knowledge, manage the repository, and ask Atlas.</p>
+          <h1 className="text-lg font-extrabold">User sign-in</h1>
+          <p className="mt-1 text-xs text-muted-foreground">Ask Atlas questions and browse conversation history.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">Full name</Label>
-            <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Priya Sharma" />
+            <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Jordan Lee" className="focus-visible:ring-teal-500" />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="email">Work email</Label>
-            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
+            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" className="focus-visible:ring-teal-500" />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required placeholder="••••••••" />
+            <Input id="password" type="password" required placeholder="••••••••" className="focus-visible:ring-teal-500" />
           </div>
-          <Button type="submit" className="mt-1">Continue</Button>
+          <Button type="submit" className="mt-1 bg-teal-600 hover:bg-teal-600/90">Continue</Button>
         </form>
 
-        <p className="mt-5 text-center text-[11px] text-muted-foreground">Enterprise SSO also available via your identity provider.</p>
+        <p className="mt-5 text-center text-[11px] text-muted-foreground">
+          This account type doesn&apos;t include Knowledge Repository or Upload Center access.
+        </p>
       </motion.div>
     </div>
   );

@@ -1,8 +1,10 @@
 import { mockRequest } from "./api-client";
 import { MOCK_CHAT_SEED } from "@/constants/mock-data";
 import { KNOWLEDGE_BASE_CONTEXT } from "@/constants/knowledge-context";
+import { DEPARTMENTS } from "@/constants/departments";
 import { hasLiveLLM, callLLM } from "@/services/llm-client";
-import type { ChatMessage, Citation } from "@/types";
+import { knowledgeStore } from "@/services/knowledge-store.service";
+import type { ChatMessage, Citation, KnowledgeItem } from "@/types";
 
 const KNOWLEDGE_RESPONSES: Array<{
   keywords: string[];
@@ -20,11 +22,7 @@ const KNOWLEDGE_RESPONSES: Array<{
       { id: "c-glue-1", title: "Glue Job Runbook", type: "runbook", locator: "§3 Retry Policy & DLQ" },
       { id: "c-glue-2", title: "KT Session 2 — Data Pipeline", type: "video", locator: "24:15" },
     ],
-    followups: [
-      "How do I clear items from the Glue DLQ?",
-      "Who receives SNS alert emails for pipeline failures?",
-      "Can we adjust the exponential backoff parameters?",
-    ],
+    followups: ["How do I clear items from the Glue DLQ?", "Who receives SNS alert emails for pipeline failures?", "Can we adjust the exponential backoff parameters?"],
   },
   {
     keywords: ["vpc", "network", "peer", "peering", "timeout"],
@@ -35,11 +33,7 @@ const KNOWLEDGE_RESPONSES: Array<{
       { id: "c-vpc-1", title: "VPC Networking Runbook", type: "runbook", locator: "§5 Inter-VPC Peering" },
       { id: "c-vpc-2", title: "Architecture Overview 2026", type: "pdf", locator: "p. 18" },
     ],
-    followups: [
-      "What is the CIDR range for staging VPC?",
-      "How do I request a new VPC peering connection?",
-      "Show me the Transit Gateway routing diagram",
-    ],
+    followups: ["What is the CIDR range for staging VPC?", "How do I request a new VPC peering connection?", "Show me the Transit Gateway routing diagram"],
   },
   {
     keywords: ["incident", "sop", "escalate", "escalation", "emergency", "oncall"],
@@ -50,11 +44,7 @@ const KNOWLEDGE_RESPONSES: Array<{
       { id: "c-inc-1", title: "Incident Response SOP", type: "runbook", locator: "§1 Severity Definitions & SLA" },
       { id: "c-inc-2", title: "Onboarding FAQ — Platform Team", type: "faq", locator: "Q4 Escalations" },
     ],
-    followups: [
-      "Who is the current IC on-call?",
-      "What defines a P1 vs P2 incident?",
-      "Where are post-mortem templates stored?",
-    ],
+    followups: ["Who is the current IC on-call?", "What defines a P1 vs P2 incident?", "Where are post-mortem templates stored?"],
   },
   {
     keywords: ["architecture", "change", "overview", "2026"],
@@ -65,68 +55,129 @@ const KNOWLEDGE_RESPONSES: Array<{
       { id: "c-arch-1", title: "Architecture Overview 2026", type: "architecture", locator: "p. 2–8" },
       { id: "c-arch-2", title: "KT Session 4 — Auth & Billing", type: "video", locator: "05:10" },
     ],
-    followups: [
-      "What vector embedding model is being used?",
-      "How is state managed between LangGraph nodes?",
-      "Where is the Kafka cluster hosted?",
-    ],
+    followups: ["What vector embedding model is being used?", "How is state managed between LangGraph nodes?", "Where is the Kafka cluster hosted?"],
   },
 ];
 
-/** Picks the most relevant known citations/followups for a question, purely as UI dressing around a real LLM answer. */
-function matchGrounding(question: string) {
+function matchTopic(question: string) {
   const qLower = question.toLowerCase();
   return KNOWLEDGE_RESPONSES.find((kr) => kr.keywords.some((kw) => qLower.includes(kw)));
 }
 
-const SYSTEM_PROMPT = `${KNOWLEDGE_BASE_CONTEXT}
+/** Real filter: does the question name a specific department? If so, scope retrieval to it. */
+function matchDepartment(question: string): { department: string; items: KnowledgeItem[] } | null {
+  const qLower = question.toLowerCase();
+  const dept = DEPARTMENTS.find((d) => qLower.includes(d.toLowerCase()));
+  if (!dept) return null;
+  const items = knowledgeStore.byDepartment(dept);
+  return { department: dept, items };
+}
+
+function itemsToCitations(items: KnowledgeItem[]): Citation[] {
+  return items.slice(0, 4).map((item) => ({
+    id: `c-${item.id}`,
+    title: item.title,
+    type: item.type,
+    locator: `${item.department} · ${item.branch}`,
+  }));
+}
+
+function buildDirectory(): string {
+  return knowledgeStore
+    .list()
+    .map((i) => `- "${i.title}" — Department: ${i.department} · Branch: ${i.branch}${i.specification ? ` · Notes: ${i.specification}` : ""} (SME: ${i.sme})`)
+    .join("\n");
+}
+
+function buildSystemPrompt(): string {
+  return `${KNOWLEDGE_BASE_CONTEXT}
+
+=== FULL DOCUMENT DIRECTORY (with department/branch tags — includes newly uploaded files) ===
+${buildDirectory()}
+
+When the person asks for documents or information from a specific department or branch,
+ONLY reference documents from the directory above that actually match that department or
+branch — never invent a department match. If asked about a department with no matching
+documents in the directory, say so plainly rather than guessing.
 
 Respond in 2-5 sentences unless the question needs more detail. Speak as Atlas: helpful,
 precise, and grounded — never invent facts outside the sources above.`;
+}
 
 async function askLive(question: string, history: ChatMessage[]): Promise<ChatMessage> {
-  const matched = matchGrounding(question);
+  const deptMatch = matchDepartment(question);
+  const topicMatch = matchTopic(question);
 
   const conversationMessages = history
     .filter((m) => m.role === "user" || m.role === "atlas")
     .slice(-8)
     .map((m) => ({ role: (m.role === "atlas" ? "assistant" : "user") as "user" | "assistant", content: m.content }));
 
-  const { text } = await callLLM(SYSTEM_PROMPT, [
-    ...conversationMessages,
-    { role: "user", content: question },
-  ]);
+  const { text } = await callLLM(buildSystemPrompt(), [...conversationMessages, { role: "user", content: question }]);
+
+  const citations = deptMatch
+    ? itemsToCitations(deptMatch.items)
+    : topicMatch?.citations ?? [{ id: `c-${Date.now()}-1`, title: "Customer Billing Pipeline v3.pdf", type: "pdf", locator: "grounded answer" }];
 
   return {
     id: `m-${Date.now()}`,
     role: "atlas",
     content: text,
     timestamp: new Date().toISOString(),
-    confidence: matched?.confidence ?? 90,
-    citations: matched?.citations ?? [
-      { id: `c-${Date.now()}-1`, title: "Customer Billing Pipeline v3.pdf", type: "pdf", locator: "grounded answer" },
-    ],
-    followups: matched?.followups ?? [
-      "Can you go into more detail?",
-      "What document is this sourced from?",
-      "Show me related documents in Repository",
-    ],
+    confidence: deptMatch ? (deptMatch.items.length > 0 ? 93 : 60) : topicMatch?.confidence ?? 90,
+    citations,
+    followups: topicMatch?.followups ?? ["Can you go into more detail?", "What document is this sourced from?", "Show me related documents in Repository"],
   };
 }
 
 function askDemo(question: string): Promise<ChatMessage> {
-  const matched = matchGrounding(question);
+  const deptMatch = matchDepartment(question);
 
-  if (matched) {
+  // Department-scoped question — answer directly from the real, structured
+  // department filter rather than the scripted topic responses.
+  if (deptMatch) {
+    const { department, items } = deptMatch;
+    if (items.length === 0) {
+      return mockRequest(
+        {
+          id: `m-${Date.now()}`,
+          role: "atlas",
+          content: `I don't have any documents tagged to the ${department} department yet. Once an SME uploads one via Upload Center and tags it "${department}", I'll be able to surface it here.`,
+          timestamp: new Date().toISOString(),
+          confidence: 60,
+          citations: [],
+          followups: [`Show me all departments`, `Who can upload ${department} documents?`],
+        },
+        700
+      );
+    }
+
+    const list = items.map((i) => `**${i.title}** (${i.branch}, SME: ${i.sme})`).join("\n- ");
     return mockRequest(
       {
         id: `m-${Date.now()}`,
         role: "atlas",
-        content: matched.answer,
+        content: `Found ${items.length} document${items.length !== 1 ? "s" : ""} tagged to the **${department}** department:\n\n- ${list}`,
         timestamp: new Date().toISOString(),
-        confidence: matched.confidence,
-        citations: matched.citations,
-        followups: matched.followups,
+        confidence: 93,
+        citations: itemsToCitations(items),
+        followups: [`Summarize the ${department} documents`, `Who's the SME for ${department}?`, "Show me another department"],
+      },
+      800
+    );
+  }
+
+  const topicMatch = matchTopic(question);
+  if (topicMatch) {
+    return mockRequest(
+      {
+        id: `m-${Date.now()}`,
+        role: "atlas",
+        content: topicMatch.answer,
+        timestamp: new Date().toISOString(),
+        confidence: topicMatch.confidence,
+        citations: topicMatch.citations,
+        followups: topicMatch.followups,
       },
       900
     );
@@ -136,18 +187,14 @@ function askDemo(question: string): Promise<ChatMessage> {
     {
       id: `m-${Date.now()}`,
       role: "atlas",
-      content: `[Demo mode — no live model connected] I analyzed your query: "${question}". Based on our 1,284 indexed SME documents and 162 training session transcripts, here are the key insights:\n\n1. **Grounding & Context**: This request correlates with enterprise procedures documented in Customer Billing Pipeline v3 and Glue Job Runbooks.\n2. **Execution Parameters**: Retrieval confidence is high across vectorized chunks from ChromaDB.\n3. **Recommended Next Steps**: Review cited sections below, or connect a live LLM (top-right of this workspace) for real, open-ended answers.`,
+      content: `[Demo mode — no live model connected] I analyzed your query: "${question}". Based on our indexed SME documents, here are the key insights:\n\n1. **Grounding & Context**: This request correlates with enterprise procedures in our knowledge base.\n2. **Try asking by department**: e.g. "show me documents from Analytics" to see real department-scoped retrieval.\n3. **Recommended Next Steps**: Connect a live LLM (top-right of this workspace) for real, open-ended answers.`,
       timestamp: new Date().toISOString(),
       confidence: 88,
       citations: [
         { id: `c-${Date.now()}-1`, title: "Customer Billing Pipeline v3.pdf", type: "pdf", locator: "p. 4–6" },
         { id: `c-${Date.now()}-2`, title: "Glue Job Runbook", type: "runbook", locator: "§2 Ingestion" },
       ],
-      followups: [
-        "Can you cite the exact runbook section?",
-        "Who is the SME for this topic?",
-        "Show me related documents in Repository",
-      ],
+      followups: ["Show me documents from Analytics", "Who is the SME for this topic?", "Show me related documents in Repository"],
     },
     1000
   );
@@ -156,18 +203,11 @@ function askDemo(question: string): Promise<ChatMessage> {
 export const chatService = {
   getSeedConversation: () => mockRequest(MOCK_CHAT_SEED),
 
-  /**
-   * Sends a question to Atlas. If a live Anthropic API key is configured,
-   * this calls the real model, grounded in the mock knowledge base context.
-   * Otherwise it falls back to the scripted demo responses (and says so).
-   */
   ask: async (question: string, history: ChatMessage[] = []): Promise<ChatMessage> => {
     if (hasLiveLLM()) {
       try {
         return await askLive(question, history);
       } catch (err) {
-        // Live call failed (bad key, network, rate limit) — fall back to demo mode
-        // rather than breaking the chat, but flag it clearly in the answer.
         const message = err instanceof Error ? err.message : "Unknown error";
         return {
           id: `m-${Date.now()}`,
