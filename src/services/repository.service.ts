@@ -44,6 +44,8 @@ function toKnowledgeItem(src: SourceItem): KnowledgeItem {
     embeddingStatus: "complete",
     lastIndexedAt: new Date((src.updated_at || 0) * 1000).toISOString(),
     sizeLabel: formatBytes(src.size_bytes || 0),
+    department: src.path.split("/")[0] || "knowledge",
+    branch: ext || "file",
   };
 }
 

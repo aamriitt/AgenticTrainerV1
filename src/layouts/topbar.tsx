@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Bell, ChevronDown, Building2, PanelLeftClose, PanelLeft, Sun, Moon, Search, LogOut, ShieldCheck, User as UserIcon } from "lucide-react";
-import { NAV_ITEMS } from "@/constants/navigation";
+import { NAV_ITEMS, ROLE_LABEL } from "@/constants/navigation";
 import { Button } from "@/components/ui/button";
 import { AtlasAvatar } from "@/components/branding/atlas-avatar";
 import { CommandPalette } from "@/components/common/command-palette";
@@ -123,7 +123,7 @@ export function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProps) {
                   </div>
                   <div className="mb-2 flex items-center gap-1.5 px-1 text-[10.5px] font-bold uppercase text-muted-foreground">
                     {user?.role === "admin" ? <ShieldCheck className="h-3 w-3 text-primary" /> : <UserIcon className="h-3 w-3 text-primary" />}
-                    Signed in as {user?.role}
+                    Signed in as {user ? ROLE_LABEL[user.role] : ""}
                   </div>
                   <button
                     onClick={() => {

@@ -22,6 +22,9 @@ export interface KnowledgeItem {
   embeddingStatus: EmbeddingStatus;
   lastIndexedAt: string | null;
   sizeLabel?: string;
+  department?: string;
+  branch?: string;
+  specification?: string;
 }
 
 export interface UploadJob {
@@ -31,6 +34,9 @@ export interface UploadJob {
   sizeLabel: string;
   stage: UploadStage;
   progress: number;
+  department?: string;
+  branch?: string;
+  specification?: string;
 }
 
 export type UploadStage =
@@ -165,8 +171,8 @@ export interface LogEntry {
   message: string;
 }
 
-/** App-level auth role — distinct from WorkspaceUser["role"] which is a Knowledge-repo permission tier. */
-export type AppRole = "admin" | "user";
+/** App-level auth role. Backend JWT currently emits admin | user; sme is accepted in the UI. */
+export type AppRole = "admin" | "sme" | "user";
 
 export type RebootxTech = "database" | "emr" | "python" | "mwaa";
 export type RebootxRiskLevel = "Low" | "Medium" | "High" | "Critical";

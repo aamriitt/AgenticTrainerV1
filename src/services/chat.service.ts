@@ -13,14 +13,13 @@ interface AskApiResponse {
 }
 
 function parseCitation(raw: string, index: number): Citation {
-  // Backend format is usually "title — locator" from format_citation
   const parts = raw.split(" — ");
   const title = parts[0]?.trim() || raw;
   const locator = parts.slice(1).join(" — ").trim() || "source";
   const lower = title.toLowerCase();
   let type: KnowledgeType = "pdf";
   if (lower.includes("faq")) type = "faq";
-  else if (lower.includes("runbook") || lower.includes("sop")) type = "runbook";
+  else if (lower.includes("runbook") || lower.includes("sop") || lower.includes("rebootx")) type = "runbook";
   else if (lower.includes("video") || lower.includes("kt")) type = "video";
   else if (lower.includes("architecture")) type = "architecture";
 
@@ -35,9 +34,6 @@ function parseCitation(raw: string, index: number): Citation {
 export const chatService = {
   getSeedConversation: () => mockRequest(MOCK_CHAT_SEED),
 
-  /**
-   * Sends a question to the grounded RAG pipeline via FastAPI `/ask`.
-   */
   ask: async (question: string, _history: ChatMessage[] = []): Promise<ChatMessage> => {
     try {
       const data = await apiRequest<AskApiResponse>("/ask", {
@@ -62,7 +58,7 @@ export const chatService = {
       return {
         id: `m-${Date.now()}`,
         role: "atlas",
-        content: `⚠️ Could not reach the knowledge API (${message}). Make sure you are signed in and the API is running on port 8000.`,
+        content: `⚠️ Could not reach the knowledge API (${message}). Sign in and ensure the API is reachable (Vite proxies /api in local dev).`,
         timestamp: new Date().toISOString(),
         confidence: 0,
         citations: [],

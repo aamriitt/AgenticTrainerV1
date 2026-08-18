@@ -90,6 +90,8 @@ export function DocumentPreview({ item, onClose }: DocumentPreviewProps) {
           <div className="mb-5 grid grid-cols-2 gap-2.5">
             <InfoTile label="Status"><StatusBadge status={item.status} /></InfoTile>
             <InfoTile label="Embedding"><StatusBadge status={item.embeddingStatus} /></InfoTile>
+            <InfoTile label="Department" value={item.department} />
+            <InfoTile label="Branch" value={item.branch} />
             <InfoTile label="Category" value={item.type.toUpperCase()} />
             <InfoTile label="Last indexed" value={item.lastIndexedAt ? new Date(item.lastIndexedAt).toLocaleDateString() : "Pending"} />
           </div>

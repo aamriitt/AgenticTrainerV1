@@ -1,12 +1,16 @@
 import { useState, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { UploadCloud, Plus, FileText, Video, FileCode2, ClipboardList, Trash2, RefreshCw, CheckCircle2, File } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { UploadCloud, Plus, FileText, Video, FileCode2, ClipboardList, Trash2, Building2 } from "lucide-react";
 import { uploadService } from "@/services/upload.service";
+import { knowledgeStore } from "@/services/knowledge-store.service";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { UploadProgress } from "@/components/upload/upload-progress";
+import { UploadMetadataModal } from "@/components/upload/upload-metadata-modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/contexts/toast-context";
-import type { UploadJob } from "@/types";
+import { useAuth } from "@/contexts/auth-context";
+import type { UploadJob, KnowledgeItem } from "@/types";
 
 const ACCEPTED_TYPES = [
   { label: "PDF", icon: FileText, ext: ".pdf" },
@@ -19,17 +23,27 @@ const ACCEPTED_TYPES = [
 
 export function UploadCenterPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: initialJobs, isLoading } = useQuery({ queryKey: ["upload-queue"], queryFn: uploadService.getQueue });
   const [jobs, setJobs] = useState<UploadJob[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
 
   if (initialJobs && jobs.length === 0 && !isLoading) {
     setJobs(initialJobs);
   }
 
-  const handleFilesAdded = async (files: FileList | File[]) => {
+  const openMetadataStep = (files: FileList | File[]) => {
     const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+    setPendingFiles(fileArray);
+  };
+
+  const handleMetadataConfirm = async (metadata: { department: string; branch: string; specification: string }) => {
+    const fileArray = pendingFiles ?? [];
+    setPendingFiles(null);
     if (fileArray.length === 0) return;
 
     const prepared: Array<{ file: File; job: UploadJob }> = fileArray.map((file, idx) => {
@@ -51,6 +65,9 @@ export function UploadCenterPage() {
           sizeLabel,
           stage: "uploaded",
           progress: 20,
+          department: metadata.department,
+          branch: metadata.branch,
+          specification: metadata.specification,
         },
       };
     });
@@ -58,19 +75,34 @@ export function UploadCenterPage() {
     setJobs((prev) => [...prepared.map((p) => p.job), ...prev]);
     toast({
       title: `${prepared.length} file(s) uploading`,
-      description: "Indexing into ChromaDB via the Agentic Trainer API.",
+      description: `Indexing into Atlas via the API (${metadata.department} / ${metadata.branch}).`,
       type: "info",
     });
 
     for (const { file, job } of prepared) {
       try {
-        setJobs((prev) =>
-          prev.map((j) => (j.id === job.id ? { ...j, stage: "chunked", progress: 55 } : j))
-        );
+        setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, stage: "chunked", progress: 55 } : j)));
         const result = await uploadService.uploadFile(file);
-        setJobs((prev) =>
-          prev.map((j) => (j.id === job.id ? { ...j, stage: "indexed", progress: 100 } : j))
-        );
+        setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, stage: "indexed", progress: 100 } : j)));
+
+        const newItem: KnowledgeItem = {
+          id: job.id,
+          title: result.filename,
+          type: job.type,
+          sme: user?.name ?? "Unknown SME",
+          uploadedAt: new Date().toISOString(),
+          tags: [metadata.department.toLowerCase()],
+          status: "active",
+          embeddingStatus: "complete",
+          lastIndexedAt: new Date().toISOString(),
+          sizeLabel: job.sizeLabel,
+          department: metadata.department,
+          branch: metadata.branch,
+          specification: metadata.specification || undefined,
+        };
+        knowledgeStore.add(newItem);
+        queryClient.invalidateQueries({ queryKey: ["repository"] });
+
         toast({
           title: "Indexing complete",
           description: `${result.filename}: ${result.chunks_indexed} chunks ready in Ask Atlas.`,
@@ -78,9 +110,7 @@ export function UploadCenterPage() {
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Upload failed";
-        setJobs((prev) =>
-          prev.map((j) => (j.id === job.id ? { ...j, stage: "uploaded", progress: 0 } : j))
-        );
+        setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, stage: "uploaded", progress: 0 } : j)));
         toast({ title: `Failed: ${job.fileName}`, description: message, type: "error" });
       }
     }
@@ -91,25 +121,17 @@ export function UploadCenterPage() {
     setIsDragging(true);
   };
 
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
+  const handleDragLeave = () => setIsDragging(false);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files) {
-      handleFilesAdded(e.dataTransfer.files);
-    }
+    if (e.dataTransfer.files) openMetadataStep(e.dataTransfer.files);
   };
 
   const handleClearCompleted = () => {
     setJobs((prev) => prev.filter((j) => j.progress < 100));
-    toast({
-      title: "Queue cleaned",
-      description: "Removed completed upload jobs from view.",
-      type: "info",
-    });
+    toast({ title: "Queue cleaned", description: "Removed completed upload jobs from view.", type: "info" });
   };
 
   return (
@@ -117,7 +139,7 @@ export function UploadCenterPage() {
       <input
         type="file"
         ref={fileInputRef}
-        onChange={(e) => e.target.files && handleFilesAdded(e.target.files)}
+        onChange={(e) => e.target.files && openMetadataStep(e.target.files)}
         multiple
         className="hidden"
       />
@@ -127,9 +149,7 @@ export function UploadCenterPage() {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`mb-6 rounded-[18px] border-2 border-dashed p-10 text-center transition-all ${
-          isDragging
-            ? "border-primary bg-primary/10 scale-[1.01]"
-            : "border-border bg-gradient-to-b from-secondary/40 to-transparent hover:border-primary/50"
+          isDragging ? "border-primary bg-primary/10 scale-[1.01]" : "border-border bg-gradient-to-b from-secondary/40 to-transparent hover:border-primary/50"
         }`}
       >
         <div className="mx-auto mb-3.5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -139,7 +159,7 @@ export function UploadCenterPage() {
           {isDragging ? "Drop files now to index!" : "Drag SME files here, or click to browse"}
         </h2>
         <p className="mb-4 text-xs text-muted-foreground">
-          PDF, Word, PowerPoint, video, transcript, or runbook — up to 2GB per file
+          PDF, Word, PowerPoint, video, transcript, or runbook — files are indexed on the API
         </p>
         <Button onClick={() => fileInputRef.current?.click()} className="rounded-xl gap-2 shadow-sm">
           <Plus className="h-4 w-4" /> Add Knowledge File
@@ -161,7 +181,7 @@ export function UploadCenterPage() {
       <div className="mb-3 flex items-center justify-between">
         <div>
           <h3 className="text-[14.5px] font-bold text-foreground">Processing Queue</h3>
-          <p className="text-xs text-muted-foreground">Real-time status of document chunking and vector embeddings</p>
+          <p className="text-xs text-muted-foreground">Chunking and vector embeddings via FastAPI</p>
         </div>
         {jobs.some((j) => j.progress === 100) && (
           <Button variant="secondary" size="sm" onClick={handleClearCompleted} className="rounded-xl text-xs gap-1.5">
@@ -173,8 +193,27 @@ export function UploadCenterPage() {
       <div className="flex flex-col gap-3.5">
         {isLoading || !jobs
           ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)
-          : jobs.map((job) => <UploadProgress key={job.id} job={job} />)}
+          : jobs.map((job) => (
+              <div key={job.id}>
+                <UploadProgress job={job} />
+                {job.department && (
+                  <div className="mt-1.5 flex gap-1.5 px-1">
+                    <Badge variant="indigo" className="gap-1">
+                      <Building2 className="h-3 w-3" /> {job.department}
+                    </Badge>
+                    <Badge>{job.branch}</Badge>
+                  </div>
+                )}
+              </div>
+            ))}
       </div>
+
+      <UploadMetadataModal
+        isOpen={pendingFiles !== null}
+        fileCount={pendingFiles?.length ?? 0}
+        onCancel={() => setPendingFiles(null)}
+        onConfirm={handleMetadataConfirm}
+      />
     </div>
   );
 }

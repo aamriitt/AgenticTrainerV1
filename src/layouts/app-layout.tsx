@@ -5,7 +5,7 @@ import { Sidebar } from "./sidebar";
 import { TopBar } from "./topbar";
 import { pageTransition } from "@/animations/variants";
 import { useAuth } from "@/contexts/auth-context";
-import { ADMIN_ONLY_PATHS } from "@/constants/navigation";
+import { getAllowedRoles } from "@/constants/navigation";
 
 /** Shell used by every authenticated route: sidebar + top bar + animated page outlet. */
 export function AppLayout() {
@@ -14,14 +14,14 @@ export function AppLayout() {
   const { user, isAuthenticated } = useAuth();
   const isAtlasWorkspace = location.pathname.startsWith("/atlas");
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
   }
 
-  // Admin-only surfaces (Analytics, Agent monitor, Pipeline monitor, Admin) are
-  // hidden from regular users — guard the route in addition to hiding the nav link.
-  const isAdminOnlyPath = ADMIN_ONLY_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`));
-  if (isAdminOnlyPath && user?.role !== "admin") {
+  // Every nav-guarded route (Repository/Upload for SME+, Pipeline/Agents/Analytics/Admin
+  // for admin-only) is enforced here too — not just hidden in the sidebar.
+  const allowedRoles = getAllowedRoles(location.pathname);
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
 

@@ -1,4 +1,4 @@
-import { FileText, Video, MessagesSquare, Gauge, Users, UploadCloud, RefreshCw, Library } from "lucide-react";
+import { FileText, Video, MessagesSquare, Gauge, Users, UploadCloud, RefreshCw, Library, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -92,13 +92,20 @@ export function DashboardPage() {
           <CardContent className="p-5">
             <h3 className="mb-3 text-[14.5px] font-bold">Quick actions</h3>
             <div className="grid grid-cols-2 gap-2.5">
-              <QuickAction icon={UploadCloud} label="Upload knowledge" onClick={() => navigate("/upload")} />
               <QuickAction icon={MessagesSquare} label="Ask Atlas" onClick={() => navigate("/atlas")} />
-              <QuickAction icon={Library} label="View sources" onClick={() => navigate("/repository")} />
+              {(user?.role === "admin" || user?.role === "sme") && (
+                <QuickAction icon={UploadCloud} label="Upload knowledge" onClick={() => navigate("/upload")} />
+              )}
+              {(user?.role === "admin" || user?.role === "sme") && (
+                <QuickAction icon={Library} label="View sources" onClick={() => navigate("/repository")} />
+              )}
               {user?.role === "admin" ? (
                 <QuickAction icon={RefreshCw} label="Reindex database" onClick={() => navigate("/pipeline")} />
               ) : (
                 <QuickAction icon={RefreshCw} label="Conversation history" onClick={() => navigate("/history")} />
+              )}
+              {user?.role === "user" && (
+                <QuickAction icon={Share2} label="Knowledge graph" onClick={() => navigate("/graph")} />
               )}
             </div>
           </CardContent>

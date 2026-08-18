@@ -4,6 +4,7 @@ import { AppLayout } from "@/layouts/app-layout";
 import { AtlasLoading } from "@/components/branding/atlas-loading";
 import { LoginSelectPage } from "@/pages/login-select-page";
 import { LoginPage } from "@/pages/login-page";
+import { BasicUserLoginPage } from "@/pages/basic-user-login-page";
 import { AdminLoginPage } from "@/pages/admin-login-page";
 import { NotFoundPage } from "@/pages/not-found-page";
 
@@ -27,7 +28,8 @@ function withSuspense(node: ReactNode) {
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginSelectPage /> },
-  { path: "/login/user", element: <LoginPage /> },
+  { path: "/login/sme", element: <LoginPage /> },
+  { path: "/login/user", element: <BasicUserLoginPage /> },
   { path: "/login/admin", element: <AdminLoginPage /> },
   {
     path: "/",

@@ -5,14 +5,14 @@ import type {
 } from "@/types";
 
 export const MOCK_KNOWLEDGE_ITEMS: KnowledgeItem[] = [
-  { id: "doc-1", title: "Customer Billing Pipeline v3.pdf", type: "pdf", sme: "Priya Sharma", uploadedAt: "2026-08-04T09:10:00Z", tags: ["billing", "etl"], status: "active", embeddingStatus: "complete", lastIndexedAt: "2026-08-06T08:00:00Z" },
-  { id: "doc-2", title: "Glue Job Runbook", type: "runbook", sme: "Arun Verma", uploadedAt: "2026-08-03T09:10:00Z", tags: ["glue", "ops"], status: "active", embeddingStatus: "complete", lastIndexedAt: "2026-08-06T03:00:00Z" },
-  { id: "doc-3", title: "KT Session 4 — Auth & Billing", type: "video", sme: "Daniel Osei", uploadedAt: "2026-08-02T09:10:00Z", tags: ["auth", "kt"], status: "active", embeddingStatus: "complete", lastIndexedAt: "2026-08-05T08:00:00Z" },
-  { id: "doc-4", title: "Architecture Overview 2026", type: "architecture", sme: "Mei Lin", uploadedAt: "2026-07-30T09:10:00Z", tags: ["architecture"], status: "processing", embeddingStatus: "in_progress", lastIndexedAt: null },
-  { id: "doc-5", title: "Incident Response SOP", type: "runbook", sme: "Arun Verma", uploadedAt: "2026-07-28T09:10:00Z", tags: ["incident", "sop"], status: "active", embeddingStatus: "complete", lastIndexedAt: "2026-08-03T08:00:00Z" },
-  { id: "doc-6", title: "Onboarding FAQ — Platform Team", type: "faq", sme: "Priya Sharma", uploadedAt: "2026-07-24T09:10:00Z", tags: ["onboarding"], status: "active", embeddingStatus: "complete", lastIndexedAt: "2026-07-31T08:00:00Z" },
-  { id: "doc-7", title: "KT Session 2 — Data Pipeline", type: "transcript", sme: "Mei Lin", uploadedAt: "2026-07-20T09:10:00Z", tags: ["data", "kt"], status: "needs_review", embeddingStatus: "failed", lastIndexedAt: null },
-  { id: "doc-8", title: "VPC Networking Runbook", type: "runbook", sme: "Arun Verma", uploadedAt: "2026-07-18T09:10:00Z", tags: ["network"], status: "active", embeddingStatus: "complete", lastIndexedAt: "2026-07-28T08:00:00Z" },
+  { id: "doc-1", title: "Customer Billing Pipeline v3.pdf", type: "pdf", sme: "Priya Sharma", uploadedAt: "2026-08-04T09:10:00Z", tags: ["billing", "etl"], status: "active", embeddingStatus: "complete", lastIndexedAt: "2026-08-06T08:00:00Z", department: "Finance", branch: "Headquarters" },
+  { id: "doc-2", title: "Glue Job Runbook", type: "runbook", sme: "Arun Verma", uploadedAt: "2026-08-03T09:10:00Z", tags: ["glue", "ops"], status: "active", embeddingStatus: "complete", lastIndexedAt: "2026-08-06T03:00:00Z", department: "Engineering", branch: "Headquarters" },
+  { id: "doc-3", title: "KT Session 4 — Auth & Billing", type: "video", sme: "Daniel Osei", uploadedAt: "2026-08-02T09:10:00Z", tags: ["auth", "kt"], status: "active", embeddingStatus: "complete", lastIndexedAt: "2026-08-05T08:00:00Z", department: "Engineering", branch: "Headquarters" },
+  { id: "doc-4", title: "Architecture Overview 2026", type: "architecture", sme: "Mei Lin", uploadedAt: "2026-07-30T09:10:00Z", tags: ["architecture"], status: "processing", embeddingStatus: "in_progress", lastIndexedAt: null, department: "Engineering", branch: "Headquarters" },
+  { id: "doc-5", title: "Incident Response SOP", type: "runbook", sme: "Arun Verma", uploadedAt: "2026-07-28T09:10:00Z", tags: ["incident", "sop"], status: "active", embeddingStatus: "complete", lastIndexedAt: "2026-08-03T08:00:00Z", department: "Operations", branch: "Headquarters" },
+  { id: "doc-6", title: "Onboarding FAQ — Platform Team", type: "faq", sme: "Priya Sharma", uploadedAt: "2026-07-24T09:10:00Z", tags: ["onboarding"], status: "active", embeddingStatus: "complete", lastIndexedAt: "2026-07-31T08:00:00Z", department: "HR", branch: "Headquarters" },
+  { id: "doc-7", title: "KT Session 2 — Data Pipeline", type: "transcript", sme: "Mei Lin", uploadedAt: "2026-07-20T09:10:00Z", tags: ["data", "kt"], status: "needs_review", embeddingStatus: "failed", lastIndexedAt: null, department: "Analytics", branch: "Headquarters" },
+  { id: "doc-8", title: "VPC Networking Runbook", type: "runbook", sme: "Arun Verma", uploadedAt: "2026-07-18T09:10:00Z", tags: ["network"], status: "active", embeddingStatus: "complete", lastIndexedAt: "2026-07-28T08:00:00Z", department: "Engineering", branch: "Headquarters" },
 ];
 
 export const MOCK_UPLOAD_JOBS: UploadJob[] = [

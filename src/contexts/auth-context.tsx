@@ -27,7 +27,7 @@ function readStoredUser(): AuthUser | null {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as AuthUser;
-    if (parsed && (parsed.role === "admin" || parsed.role === "user") && getAccessToken()) {
+    if (parsed && (parsed.role === "admin" || parsed.role === "user" || parsed.role === "sme") && getAccessToken()) {
       return parsed;
     }
     return null;
