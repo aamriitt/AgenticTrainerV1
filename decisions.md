@@ -4,6 +4,34 @@ Living record of meaningful choices made while changing this codebase. Each entr
 
 ---
 
+## 2026-08-18 — Env-based API URL + RebootX facts in Atlas KB
+
+**Decision:** Frontend default base URL is `/api` (Vite/preview proxy to `API_PROXY_TARGET`). Production sets `VITE_API_BASE_URL` to the public API origin. RebootX JSON is exported to `knowledge/sop/rebootx-*-compatibility.txt` and indexed into Atlas `enterprise_knowledge` on API start.
+
+**Alternatives:** Keep hardcoded `localhost:8000`; leave upgrade facts only in the RebootX Chroma collection.
+
+**Why this:** A clone on GitHub must run without editing source for localhost. Ask Atlas should answer upgrade questions from the same facts RebootX uses, so the two products share one KB in git.
+
+**Tradeoff accepted:** First API start after pull re-embeds those SOP files (idempotent by source_id). Set `ATLAS_SYNC_REBOOTX_KB=false` to skip. Same-origin `/api` needs a reverse proxy in production if UI and API are split without `VITE_API_BASE_URL`.
+
+**Files:** `src/services/api-client.ts`, `vite.config.ts`, `app/api.py`, `app/config.py`, `app/knowledge_bridge.py`, `knowledge/sop/rebootx-*.txt`, `.env.example`
+
+---
+
+## 2026-08-17 — Refuse related-but-wrong-topic RAG hits (LangChain vs LangGraph)
+
+**Decision:** After hybrid retrieval, drop chunks that do not contain distinctive query tokens (length ≥ 6). Verification now also receives the question and refuses if those tokens are absent. Reasoning prompt forbids substituting a related topic.
+
+**Alternatives:** Raise `MIN_RELEVANCE_SCORE` globally; LLM-as-judge after generation; query expansion.
+
+**Why this:** Vector search puts LangChain notes near a LangGraph question, cosine often clears 0.35, and RRF always has a #1. The gate never looked at the question, so the LLM answered from the nearest document and cited it. Distinctive-term overlap is cheap and catches this class of error without an extra LLM call.
+
+**Tradeoff accepted:** Paraphrases that never use a long query term (e.g. “graph orchestration library” with no “langgraph”) may refuse even if notes would have helped. Short codes like `MOQ` still rely on BM25. The first version used OR-matching on all long words, which still let a LangGraph question hit LangChain notes because those pages contain “document” / “loader” / “methods”. Required terms are now product/topic tokens only, and **all** of them must appear.
+
+**Files:** `app/agents/retrieval.py`, `app/agents/verification.py`, `app/agents/reasoning.py`, `app/pipeline.py`
+
+---
+
 ## 2026-08-14 — Integrate RebootX as a module, not a second app
 
 **Decision:** Copy the RebootX assessment engine, scanner, compatibility JSON, and reports into `app/rebootx/` and expose them on the existing FastAPI + Atlas UI (`/refresh`). Do not run a second uvicorn/Streamlit stack.

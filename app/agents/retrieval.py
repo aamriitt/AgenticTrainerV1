@@ -62,10 +62,49 @@ _STOPWORDS = frozenset(
     our your and or but if then so not no nor""".split()
 )
 
+# Generic query words that must NOT satisfy the topic check by themselves.
+# "document loader methods in langgraph" would otherwise match LangChain notes
+# because those pages contain "document" / "loader" / "methods".
+_COMMON_QUERY_WORDS = frozenset(
+    """different various several available following listed mentioned
+    document documents loader loaders method methods type types
+    comparison compare explain explanation describe description
+    using based according provided context process system service
+    application example examples used work works working handle
+    handling create creating answer question component components
+    content source sources data file files page pages
+    """.split()
+)
+
 
 def _tokenize(text: str) -> list[str]:
     tokens = re.findall(r"[a-z0-9]+", text.lower())
     return [t for t in tokens if t not in _STOPWORDS and len(t) > 1]
+
+
+def _required_tokens(query: str) -> list[str]:
+    """Product/topic tokens the evidence must actually contain.
+
+    Length >= 6 and not a generic English query word. That makes
+    `langgraph` required while `document` / `loader` / `methods` are not.
+    """
+    return [t for t in _tokenize(query) if len(t) >= 6 and t not in _COMMON_QUERY_WORDS]
+
+
+def _text_has_all_required(text: str, required: list[str]) -> bool:
+    if not required:
+        return True
+    haystack = text.lower()
+    return all(token in haystack for token in required)
+
+
+# Back-compat aliases used by VerificationAgent
+def _anchor_tokens(query: str) -> list[str]:
+    return _required_tokens(query)
+
+
+def _chunk_has_anchors(text: str, anchors: list[str]) -> bool:
+    return _text_has_all_required(text, anchors)
 
 
 class RetrievalAgent:
@@ -140,6 +179,17 @@ class RetrievalAgent:
             bm25_results = [r for r in bm25_results if r.chunk.source_type.value == source_type_filter]
 
         fused = self._reciprocal_rank_fusion(vector_results, bm25_results, alpha)
+        required = _required_tokens(query)
+        if required:
+            on_topic = [r for r in fused if _text_has_all_required(r.chunk.text, required)]
+            if on_topic:
+                fused = on_topic
+            else:
+                logger.info(
+                    "Retrieval: no chunk contains required topic terms %s; refusing related-document hits",
+                    required,
+                )
+                return []
         return fused[:top_k]
 
     @staticmethod

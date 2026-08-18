@@ -1,0 +1,69 @@
+# RebootX compatibility knowledge — database
+
+Enterprise upgrade guidance also used by the RebootX tech-refresh engine.
+Ask Atlas can retrieve these notes for Python, PostgreSQL, EMR, and MWAA upgrades.
+
+## db-integration-jdbc-java
+Source: Cross-Language Integration Matrix
+Topic: integration
+Risk hint: High
+
+Java consumers connect to PostgreSQL through the pgjdbc JDBC driver, which is bundled inside each application rather than shared. PostgreSQL JDBC drivers older than 42.2.5 fail SCRAM-SHA-256 authentication, and builds before 42.5 may not negotiate the TLS defaults enforced by PostgreSQL 15+. Because the driver ships per-service, every Java integration (claims, billing, policy admin) must be independently rebuilt and redeployed with an updated pgjdbc. Connection-pool libraries (HikariCP) may also cache prepared statements that break on server-side plan changes.
+
+## db-integration-odbc-dotnet
+Source: Cross-Language Integration Matrix
+Topic: integration
+Risk hint: High
+
+A single PostgreSQL upgrade can affect consumers written in different languages very differently. A .NET reporting service using Npgsql or the psqlODBC driver requires Npgsql 6.0+ (for PG15) and an updated psqlODBC build to speak the new wire protocol and SCRAM authentication, while a Python ETL job on psycopg2 needs 2.9.3+, and a Java service needs pgjdbc 42.5+. These are independent upgrades owned by different teams with different release cadences, so the database change fans out into several coordinated client changes that must all land before cutover.
+
+## db-integration-shared-contract
+Source: Shared Database Ownership Runbook
+Topic: integration
+Risk hint: High
+
+When multiple teams consume the same database, the schema and engine behavior become a shared contract that no single team fully owns. One team may read via a Java JDBC service, another via a Python data pipeline, and another via a BI tool over ODBC; each relies on specific type representations, extensions, or query-plan behavior. An engine upgrade that changes planner statistics, default authentication, or type output silently breaks a subset of consumers. Mitigation requires inventorying every dependent service, assigning named owners, running per-consumer integration tests, and gating the cutover on all consumers being validated together.
+
+## db-integration-serialization-contract
+Source: Cross-Language Integration Matrix
+Topic: integration
+Risk hint: Medium
+
+Cross-language data contracts break in subtle ways during upgrades. REST APIs backed by the upgraded system may change JSON serialization (timestamp precision, decimal/numeric formatting, null-vs-omitted fields, enum casing), silently breaking consumers in strictly-typed languages. Event-driven consumers reading Kafka topics depend on Avro/Protobuf schema-registry compatibility, and shared Parquet/Avro files written by Spark (Scala) and read by pandas (Python) can fail on schema evolution or type-width changes. Always run cross-language contract tests and diff representative payloads and files before and after the upgrade.
+
+## db-postgres-13-to-15-breaking
+Source: PostgreSQL 15 Release Notes
+Topic: version
+Upgrade path: 13 → 15
+Risk hint: High
+
+PostgreSQL 13 to 15 upgrade via pg_upgrade is supported but requires careful planning. Breaking changes include: removal of old replication slot behavior for logical replication, stricter SCRAM-SHA-256 authentication defaults (md5 auth deprecated), adminpack extension removed from contrib, and changes to JSON path query functions. Applications using psycopg2 2.8 or older may fail SSL handshake with PG15. SQLAlchemy 1.3 is not fully compatible with PG15 — upgrade to SQLAlchemy 1.4+ or 2.0. Review all custom PL/pgSQL functions using deprecated JSON operators (-> vs ->>).
+
+## db-postgres-config-tuning
+Source: DBA Runbook
+Topic: config
+Risk hint: Medium
+
+PostgreSQL configuration risks during major version upgrades: wal_level, max_connections, shared_buffers, and autovacuum settings often need retuning after upgrade. Replication lag can spike during cutover if standby nodes are not pre-synced. Extensions such as pg_stat_statements, PostGIS, and pg_cron must be upgraded separately using ALTER EXTENSION. pg_hba.conf authentication method changes can block application connections silently. Always run pg_upgrade --check before actual migration and validate backup/restore in staging.
+
+## db-postgres-dependency-psycopg2
+Source: Dependency Compatibility Matrix
+Topic: dependency
+Risk hint: Medium
+
+psycopg2 and psycopg2-binary compatibility with PostgreSQL 15: psycopg2 >= 2.9.3 recommended for PG15 SSL and SCRAM support. Older psycopg2 2.7/2.8 builds may raise OperationalError on SCRAM authentication. psycopg3 (psycopg package) is the modern replacement with async support. SQLAlchemy connection strings using sslmode=require must be validated after PG15 upgrade. Connection pool settings (pool_size, max_overflow) may need adjustment due to changed default timeouts.
+
+## db-postgres-integration-etl
+Source: Integration Checklist
+Topic: integration
+Risk hint: Medium
+
+PostgreSQL integration risks for ETL and BI layers: JDBC drivers (PostgreSQL JDBC 42.x) must be updated for PG15 compatibility. Debezium CDC connectors require version 2.x for PG15 logical replication. dbt-postgres adapter versions below 1.5 may generate incompatible SQL. AWS DMS tasks need engine version mapping updated. BI tools (Tableau, Power BI, Metabase) using native PostgreSQL connectors should be tested for query plan changes on upgraded statistics.
+
+## db-postgres-14-to-16
+Source: PostgreSQL 16 Release Notes
+Topic: version
+Upgrade path: 14 → 16
+Risk hint: High
+
+PostgreSQL 14 to 16 upgrade notes: PG16 introduces logical decoding on standby replicas, changes to vacuum freezing behavior, and removal of some deprecated recovery settings. Query planner statistics changes may cause performance regressions on complex joins. pg_stat_statements normalized query text format changed. Monitor for increased WAL generation during first vacuum cycle post-upgrade.

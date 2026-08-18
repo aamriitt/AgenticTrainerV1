@@ -3,7 +3,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TechnologyType(str, Enum):
@@ -145,6 +145,8 @@ class HealthResponse(BaseModel):
 
 
 class LLMStatusResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     enabled: bool = Field(..., description="Whether the LLM backend is enabled in config")
     server_up: bool = Field(..., description="Whether the Ollama server is reachable")
     model: str = Field(..., description="Configured model name")

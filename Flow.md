@@ -5,7 +5,7 @@ How a request actually moves through this repo: files, functions, order. If you 
 Two processes must be running for live paths:
 
 1. FastAPI — `uvicorn app.api:app --host 127.0.0.1 --port 8000` (module import constructs a process-wide `AgenticTrainerPipeline()` in `app/api.py`)
-2. Vite — `npm run dev` (default `http://localhost:5173`), `VITE_API_BASE_URL` → `http://localhost:8000`
+2. Vite — `npm run dev` (default `http://localhost:5173`). The UI calls `/api/...`, which Vite proxies to `API_PROXY_TARGET` (default `http://127.0.0.1:8000`). Set `VITE_API_BASE_URL` to an absolute origin when the API is hosted elsewhere.
 
 Ollama at `http://localhost:11434` is required for the **reason** node, not for login, sources, or health.
 
@@ -99,8 +99,8 @@ sequenceDiagram
 | 5 | `app/api.py` | `ask_question` | Auth, empty-question 400 |
 | 6 | `app/pipeline.py` | `AgenticTrainerPipeline.ask` | `self._graph.invoke` |
 | 7 | `app/agents/intent.py` | `IntentAgent.classify` | Graph node `classify_intent` |
-| 8 | `app/agents/retrieval.py` | `RetrievalAgent.retrieve` | Dense + BM25, RRF. Uses `EmbeddingAgent.embed_query` + `ChromaStore` |
-| 9 | `app/agents/verification.py` | `VerificationAgent.verify` | Rubric gate |
+| 8 | `app/agents/retrieval.py` | `RetrievalAgent.retrieve` | Dense + BM25, RRF, then drop chunks missing distinctive query terms (e.g. langgraph) |
+| 9 | `app/agents/verification.py` | `VerificationAgent.verify(chunks, question)` | Rubric gate + same term check |
 | 10a | `app/agents/reasoning.py` | `ReasoningAgent.generate_answer` | Only if evidence sufficient; Ollama |
 | 10b | `app/pipeline.py` | `_node_refuse` | Fixed refusal string |
 | 11 | `app/agents/citation.py` | `build_citations` | Skipped list if refused |
@@ -235,14 +235,11 @@ Local scan/capture cannot leave `C:\Coding Practice\Agentic-TrainerV1`. GitHub c
 
 ---
 
-## This session (2026-08-14)
+## This session (2026-08-18)
 
-**Modifying / adding the RebootX hop above.** Ask Atlas `/ask` is unchanged.
+**Hops changed:** UI API base URL (`api-client.ts` + Vite `/api` proxy). Atlas ingest of RebootX SOP files (`app/knowledge_bridge.py` on API start). Ask Atlas query graph otherwise unchanged.
 
 | Action | Path |
 | --- | --- |
-| Added | `app/rebootx/**` (engine, router, scanner, services) |
-| Added | `knowledge/rebootx/**` (python, emr, mwaa, database JSON) |
-| Added | `src/features/rebootx/tech-refresh-page.tsx`, `src/services/rebootx.service.ts` |
-| Wired | `app/api.py` includes `/rebootx/*`; `/health` reports `rebootx_documents` |
-| Nav | `/refresh` for user + admin |
+| Env API | `VITE_API_BASE_URL=/api`, `API_PROXY_TARGET`, `PUBLIC_APP_URL`, `CORS_ORIGINS` |
+| Atlas KB | `knowledge/sop/rebootx-*-compatibility.txt` indexed into `enterprise_knowledge` |

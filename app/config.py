@@ -83,6 +83,24 @@ class Settings:
     # --- Logging ---
     log_level: str = field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
 
+    # --- HTTP / frontend (set these for any non-local deploy) ---
+    public_app_url: str = field(
+        default_factory=lambda: os.getenv("PUBLIC_APP_URL", "http://localhost:5173").rstrip("/")
+    )
+    cors_origins: list[str] = field(
+        default_factory=lambda: [
+            o.strip()
+            for o in os.getenv(
+                "CORS_ORIGINS",
+                "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000",
+            ).split(",")
+            if o.strip()
+        ]
+    )
+    sync_rebootx_kb_on_start: bool = field(
+        default_factory=lambda: _get_bool("ATLAS_SYNC_REBOOTX_KB", True)
+    )
+
     def ensure_dirs(self) -> None:
         """Create required directories if they don't already exist."""
         for d in (self.knowledge_dir, self.chroma_dir, self.log_dir):

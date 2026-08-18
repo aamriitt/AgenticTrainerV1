@@ -146,7 +146,10 @@ class AgenticTrainerPipeline:
         return {"retrieved_chunks": retrieved}
 
     def _node_verify(self, state: QueryState) -> QueryState:
-        verification = self.verification_agent.verify(state["retrieved_chunks"])
+        verification = self.verification_agent.verify(
+            state["retrieved_chunks"],
+            question=state["question"],
+        )
         return {"verification": verification}
 
     def _node_reason(self, state: QueryState) -> QueryState:

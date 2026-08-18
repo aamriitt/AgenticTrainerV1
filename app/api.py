@@ -25,6 +25,7 @@ from app.auth import (
     require_admin,
 )
 from app.config import settings
+from app.knowledge_bridge import ingest_rebootx_into_atlas
 from app.pipeline import AgenticTrainerPipeline
 from app.rebootx.engine import knowledge_service as rebootx_knowledge, seed_compatibility_knowledge
 from app.rebootx.router import router as rebootx_router
@@ -38,24 +39,20 @@ app = FastAPI(
     version="1.1.0",
 )
 
-_cors_origins = [
-    o.strip()
-    for o in __import__("os").getenv(
-        "CORS_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000",
-    ).split(",")
-    if o.strip()
-]
+_cors_origins = settings.cors_origins
+_cors_allow_credentials = "*" not in _cors_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
-    allow_credentials=True,
+    allow_origins=["*"] if not _cors_allow_credentials else _cors_origins,
+    allow_credentials=_cors_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 pipeline = AgenticTrainerPipeline()
 seed_compatibility_knowledge()
+if settings.sync_rebootx_kb_on_start:
+    ingest_rebootx_into_atlas(pipeline)
 
 app.include_router(rebootx_router)
 
@@ -295,6 +292,16 @@ async def list_interactions(
     limit = max(1, min(limit, 200))
     rows = pipeline.feedback_store.list_recent_interactions(limit=limit)
     return {"items": rows, "count": len(rows), "requested_by": user.email}
+
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Agentic Trainer API is running",
+        "health": "/health",
+        "docs": "/docs",
+        "ui": settings.public_app_url,
+    }
 
 
 @app.get("/health")

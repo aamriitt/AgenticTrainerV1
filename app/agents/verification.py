@@ -40,6 +40,7 @@ from __future__ import annotations
 import re
 
 from app.config import settings
+from app.agents.retrieval import _anchor_tokens, _chunk_has_anchors
 from app.utils.logger import get_logger
 from app.utils.schemas import RetrievedChunk, VerificationResult
 
@@ -110,7 +111,7 @@ class VerificationAgent:
         self.min_context_chunks = min_context_chunks or settings.min_context_chunks
         self.min_relevance_score = min_relevance_score or settings.min_relevance_score
 
-    def verify(self, retrieved: list[RetrievedChunk]) -> VerificationResult:
+    def verify(self, retrieved: list[RetrievedChunk], question: str | None = None) -> VerificationResult:
         if not retrieved:
             return VerificationResult(
                 sufficient_evidence=False,
@@ -118,6 +119,22 @@ class VerificationAgent:
                 confidence=0.0,
                 reason="No chunks retrieved for this question.",
             )
+
+        if question:
+            required = _anchor_tokens(question)
+            evidence = " ".join(r.chunk.text for r in retrieved)
+            if required and not _chunk_has_anchors(evidence, required):
+                reason = (
+                    f"Retrieved chunks do not mention required topic terms {required}; "
+                    "refusing to answer from a related-but-different document."
+                )
+                logger.info("Verification: sufficient=False (%s)", reason)
+                return VerificationResult(
+                    sufficient_evidence=False,
+                    has_conflicts=False,
+                    confidence=0.0,
+                    reason=reason,
+                )
 
         top_relevance = _absolute_relevance(retrieved[0])
         num_chunks = len(retrieved)

@@ -1,12 +1,17 @@
 /**
- * Production API client for the Agentic Trainer FastAPI backend.
- * Attaches JWT from localStorage and surfaces HTTP errors clearly.
+ * HTTP client for the Agentic Trainer API.
+ *
+ * Base URL resolution (GitHub / any host, not localhost-only):
+ * - VITE_API_BASE_URL set to an absolute URL → that host (e.g. https://api.example.com)
+ * - VITE_API_BASE_URL=/api or unset → same-origin `/api` (Vite proxy in dev, reverse proxy in prod)
  */
 
 const TOKEN_KEY = "atlas-trainer-token";
 
 export function getApiBaseUrl(): string {
-  return (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") || "http://localhost:8000";
+  const raw = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  if (raw === undefined || raw === "") return "/api";
+  return raw.replace(/\/$/, "");
 }
 
 export function getAccessToken(): string | null {
